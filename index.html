@@ -110,20 +110,21 @@
         };
 
         const ContactItem = ({ initials, name, position, email }) => (
-            <div className="contact-card flex items-center gap-4 p-4 rounded-3xl hover:bg-slate-50 transition-all duration-300 group cursor-default">
-                <div className="w-12 h-12 rounded-full bg-[#d8f3dc] text-[#2d6a4f] flex items-center justify-center font-black text-sm shadow-sm group-hover:bg-[#2d6a4f] group-hover:text-white transition-colors duration-300">
+            <div className="contact-card flex items-center gap-4 p-5 rounded-3xl hover:bg-white hover:shadow-md transition-all duration-300 group cursor-default border border-transparent hover:border-slate-100">
+                <div className="w-12 h-12 rounded-full bg-[#d8f3dc] text-[#2d6a4f] flex items-center justify-center font-black text-sm shadow-sm group-hover:bg-[#2d6a4f] group-hover:text-white transition-colors duration-300 flex-shrink-0">
                     {initials}
                 </div>
                 <div className="flex-1 min-w-0">
                     <p className="text-[13px] font-black text-slate-800 leading-tight uppercase tracking-tight truncate">{name}</p>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5 whitespace-normal leading-relaxed">{position}</p>
-                    <a href={`mailto:${email}`} className="text-[11px] font-medium text-[#2d6a4f] hover:underline flex items-center gap-1 mt-1 lowercase">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 whitespace-normal leading-relaxed">{position}</p>
+                    <a href={`mailto:${email}`} className="text-[11px] font-medium text-[#2d6a4f] hover:underline flex items-center gap-1 mt-1.5 lowercase">
+                        <Icono nombre="Mail" size={12} />
                         {email}
                     </a>
                 </div>
                 <div className="contact-action opacity-0 transform translate-x-2 transition-all duration-300 hidden md:block">
                     <a href={`mailto:${email}`} className="p-3 bg-white border border-slate-100 rounded-full text-[#c89e3a] shadow-sm hover:shadow-md hover:bg-slate-50 transition-all">
-                        <Icono nombre="Mail" size={18} />
+                        <Icono nombre="ExternalLink" size={18} />
                     </a>
                 </div>
             </div>
@@ -471,7 +472,7 @@
                         </div>
                     </header>
 
-                    <main className="max-w-7xl mx-auto p-4 md:p-8 space-y-8">
+                    <main className="max-w-7xl mx-auto p-4 md:p-8 space-y-12">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <IndicatorCard label="Municipios en Red" value={stats?.municipios} icon={<Icono nombre="Globe" size={24} />} color="bg-[#2d6a4f]" />
                             <IndicatorCard label="Población Bajo Cobertura" value={stats?.pobTotal.toLocaleString()} icon={<Icono nombre="Users" size={24} />} color="bg-[#1b4332]" />
@@ -505,10 +506,10 @@
                         </div>
 
                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                            <div className="lg:col-span-7 space-y-8">
+                            <div className="lg:col-span-7 space-y-6">
                                 <section>
                                     <h3 className="font-black uppercase text-[10px] tracking-[0.2em] text-[#2d6a4f] px-3 mb-4">Listado Operativo ({processedResults.length})</h3>
-                                    <div className="grid gap-4 max-h-[600px] overflow-y-auto pr-3 custom-scrollbar">
+                                    <div className="grid gap-4 max-h-[650px] overflow-y-auto pr-3 custom-scrollbar">
                                         {processedResults.map((item, idx) => (
                                             <div key={idx} onClick={() => setSelectedRecord(item)} className={`group p-6 rounded-[2rem] border-2 transition-all cursor-pointer relative overflow-hidden ${selectedRecord === item ? 'bg-[#f1f8e9] border-[#2d6a4f] shadow-md' : 'bg-white border-transparent shadow-sm hover:border-[#c89e3a] hover:shadow-lg'}`}>
                                                 <div className="flex justify-between items-center gap-6">
@@ -538,38 +539,6 @@
                                                 </div>
                                             </div>
                                         ))}
-                                    </div>
-                                </section>
-
-                                <section className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100">
-                                    <div className="flex items-center gap-3 mb-8 px-2">
-                                        <div className="p-2 bg-[#d8f3dc] text-[#2d6a4f] rounded-lg">
-                                            <Icono nombre="Headphones" size={18} />
-                                        </div>
-                                        <h3 className="font-black uppercase text-[10px] tracking-[0.25em] text-[#2d6a4f]">Responsables y Soporte Técnico</h3>
-                                    </div>
-                                    
-                                    <div className="space-y-2">
-                                        <ContactItem 
-                                            initials="OG" 
-                                            name="L.C. Omar Granados Piña" 
-                                            position="Director de Planeación, Evaluación y Proyectos Especiales" 
-                                            email="dir.planeacion@slpsalud.gob.mx" 
-                                        />
-                                        <div className="h-px bg-slate-50 mx-4"></div>
-                                        <ContactItem 
-                                            initials="DE" 
-                                            name="Ing. Dorian Escamilla Sauceda" 
-                                            position="Subdirector de Informática y Estadísticas en Salud" 
-                                            email="sub.informatica@slpsalud.gob.mx" 
-                                        />
-                                        <div className="h-px bg-slate-50 mx-4"></div>
-                                        <ContactItem 
-                                            initials="FM" 
-                                            name="Fernando Montoya Rivera" 
-                                            position="Desarrollador de la herramienta y Responsable de Información Geográfica y CLUES" 
-                                            email="clues.estadistica@slpsalud.gob.mx" 
-                                        />
                                     </div>
                                 </section>
                             </div>
@@ -609,44 +578,7 @@
                                                                 </div>
                                                             </div>
                                                         )}
-                                                        
-                                                        {selectedRecord.type === 'INDIVIDUAL_LOC' && (
-                                                            <div className="flex items-start gap-3 bg-white/5 p-3 rounded-xl border border-white/5 col-span-1 md:col-span-2">
-                                                                <Icono nombre="MapPin" size={16} className="text-blue-300 mt-0.5" />
-                                                                <div>
-                                                                    <p className="text-[8px] font-black text-blue-200 uppercase tracking-widest">Municipio Perteneciente</p>
-                                                                    <p className="text-[10px] font-bold uppercase">
-                                                                        {selectedRecord.municipio_display} <span className="text-blue-300 font-normal">({selectedRecord.cve_mun || 'S/C'})</span>
-                                                                    </p>
-                                                                </div>
-                                                            </div>
-                                                        )}
                                                     </div>
-                                                    
-                                                    {(selectedRecord.type === 'INDIVIDUAL_LOC' || selectedRecord.type === 'GROUPED_UNIT_INDIVIDUAL') && (
-                                                        <div className="flex items-start gap-3 bg-white/5 p-3 rounded-xl border border-white/5 col-span-1 md:col-span-2">
-                                                            <Icono nombre="Hospital" size={16} className="text-[#c89e3a] mt-0.5" />
-                                                            <div className="flex-1">
-                                                                <p className="text-[8px] font-black text-[#d8f3dc] uppercase tracking-widest">
-                                                                    {selectedRecord.type === 'INDIVIDUAL_LOC' ? 'Unidad Médica Asignada' : 'Unidad Médica'}
-                                                                </p>
-                                                                <p className="text-[11px] font-bold uppercase leading-tight mb-1">
-                                                                    {selectedRecord.UNIDAD || selectedRecord.title} 
-                                                                    <span className="ml-2 text-amber-300 font-mono text-[11px]">[{selectedRecord.CLUES || selectedRecord.clues || 'S/C'}]</span>
-                                                                </p>
-                                                                <div className="flex flex-wrap gap-x-4 gap-y-1">
-                                                                    <div className="flex items-center gap-1.5 mt-1">
-                                                                        <Icono nombre="ShieldCheck" size={10} className="text-amber-300/60" />
-                                                                        <span className="text-[9px] font-bold text-white/70 uppercase tracking-wider">INST: {selectedRecord.nomInst || selectedRecord.inst || 'S/I'}</span>
-                                                                    </div>
-                                                                    <div className="flex items-center gap-1.5 mt-1">
-                                                                        <Icono nombre="Map" size={10} className="text-amber-300/60" />
-                                                                        <span className="text-[9px] font-bold text-white/70 uppercase tracking-wider">JUR Operativa: {selectedRecord.jur_um || selectedRecord.jur}</span>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    )}
                                                 </div>
                                             </div>
                                             <div className="p-10 space-y-10 max-h-[550px] overflow-y-auto custom-scrollbar bg-[#fcfdfc]">
@@ -659,7 +591,7 @@
                                                         <div className="grid gap-3">
                                                             {selectedRecord.type === 'GROUPED_MUN' ? (
                                                                 Object.values(selectedRecord.unidadesData).sort((a,b) => a.nombre.localeCompare(b.nombre)).map((u, i) => (
-                                                                    <div key={i} onClick={() => setModalState({ isOpen: true, unit: u.nombre, localities: u.localidades, clues: u.clues })} className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm hover:border-[#2d6a4f] hover:shadow-md transition-all group/unit cursor-pointer relative overflow-hidden">
+                                                                    <div key={i} onClick={() => setModalState({ isOpen: true, unit: u.nombre, localities: u.localities, clues: u.clues })} className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm hover:border-[#2d6a4f] hover:shadow-md transition-all group/unit cursor-pointer relative overflow-hidden">
                                                                         <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover/unit:opacity-100 transition-opacity"><Icono nombre="ChevronRight" size={16} className="text-[#c89e3a]" /></div>
                                                                         <p className="text-[10px] font-black text-slate-700 uppercase leading-tight mb-1 group-hover/unit:text-[#2d6a4f] pr-6">{u.nombre}</p>
                                                                         <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
@@ -721,6 +653,39 @@
                                 </div>
                             </div>
                         </div>
+
+                        {/* SECCIÓN ACTUALIZADA: RESPONSABLES (Fuera de la cuadrícula lateral) */}
+                        <section className="bg-white p-10 rounded-[3rem] shadow-xl border border-slate-100 animate-in fade-in duration-1000 mt-8">
+                            <div className="flex items-center gap-3 mb-10 px-4">
+                                <div className="p-3 bg-[#d8f3dc] text-[#2d6a4f] rounded-2xl shadow-sm">
+                                    <Icono nombre="Users" size={24} />
+                                </div>
+                                <div>
+                                    <h3 className="font-black uppercase text-xs tracking-[0.3em] text-[#2d6a4f]">Responsables de la plataforma y administración de datos</h3>
+                                </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                <ContactItem 
+                                    initials="OG" 
+                                    name="L.C. Omar Granados Piña" 
+                                    position="Director de Planeación, Evaluación y Proyectos Especiales" 
+                                    email="dir.planeacion@slpsalud.gob.mx" 
+                                />
+                                <ContactItem 
+                                    initials="DE" 
+                                    name="Ing. Dorian Escamilla Sauceda" 
+                                    position="Subdirector de Informática y Estadísticas en Salud" 
+                                    email="sub.informatica@slpsalud.gob.mx" 
+                                />
+                                <ContactItem 
+                                    initials="FM" 
+                                    name="Fernando Montoya Rivera" 
+                                    position="Desarrollador de la herramienta y Responsable de Información Geográfica y CLUES" 
+                                    email="clues.estadistica@slpsalud.gob.mx" 
+                                />
+                            </div>
+                        </section>
                     </main>
                 </div>
             );
