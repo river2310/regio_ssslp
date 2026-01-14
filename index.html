@@ -185,7 +185,7 @@
         const IndicatorCard = ({ label, value, icon, color }) => (
             <div className="bg-white p-8 rounded-[2.5rem] shadow-lg border border-slate-50 flex items-center gap-6 transition-all hover:shadow-2xl hover:-translate-y-1 border-b-[6px] border-transparent hover:border-[#c89e3a] group">
                 <div className={`${color} p-5 rounded-2xl text-white shadow-lg transform group-hover:rotate-6 transition-transform duration-500`}>
-                    <Icono nombre={icon} size={24} />
+                    {icon}
                 </div>
                 <div>
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1 leading-none">{label}</p>
@@ -288,7 +288,8 @@
                                     UNIDAD: unit,
                                     CLUES: item.CLUES,
                                     nomInst: item.nom_inst || item.NOM_INST || 'N/A',
-                                    jur: item.JUR,
+                                    jur: item.jur_mun || item.JUR_MUN || item.JUR, // Ajuste: Vincula jur_mun a Localidades
+                                    jur_um: item.JUR, // Mantiene JUR para la unidad médica específica
                                     jurName: item.JUR_NOMBRE || item.NOMBRE,
                                     cve_geo: item.cve_geo,
                                     cve_mun: item.CVE_MUN_ATIENDE,
@@ -318,7 +319,7 @@
                                 groupedMun[key] = {
                                     type: 'GROUPED_MUN',
                                     title: munName,
-                                    jur: item.JUR,
+                                    jur: item.jur_mun || item.JUR_MUN || item.JUR, // Usa jur_mun para el municipio
                                     jurName: item.JUR_NOMBRE || item.NOMBRE,
                                     cve_mun: item.CVE_MUN_ATIENDE,
                                     unidadesData: {},
@@ -364,7 +365,7 @@
                                     title: unitName,
                                     clues: clues,
                                     inst: item.nom_inst || item.NOM_INST || 'S/I',
-                                    jur: item.JUR,
+                                    jur: item.JUR, // Mantiene JUR para jurisdicción de la unidad médica
                                     jurName: item.JUR_NOMBRE || item.NOMBRE,
                                     localities: [],
                                     pob_total: 0, pob_s_derecho: 0, pob_imss: 0, pob_issste: 0, pob_imss_bien: 0, pob_bien: 0
@@ -434,7 +435,7 @@
                                     <Icono nombre="RefreshCw" size={18} />
                                 </button>
                                 <div className="h-8 w-[1px] bg-white/10 mx-1"></div>
-                                <div className="bg-white/10 px-4 py-2 rounded-xl flex items-center gap-3 border border-white/5">
+                                <div className="bg-white/10 px-4 py-2 rounded-xl flex items-center gap-3 border border-white/5 shadow-sm">
                                     <span className="text-[10px] font-black uppercase tracking-widest leading-none text-white/80">ver. 21.10.2025</span>
                                 </div>
                             </div>
@@ -443,8 +444,8 @@
 
                     <main className="max-w-7xl mx-auto p-4 md:p-8 space-y-8">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <IndicatorCard label="Municipios en Red" value={stats?.municipios} icon="Globe" color="bg-[#1b4332]" />
-                            <IndicatorCard label="Población Bajo Cobertura" value={stats?.pobTotal.toLocaleString()} icon="Users" color="bg-[#2d6a4f]" />
+                            <IndicatorCard label="Municipios en Red" value={stats?.municipios} icon={<Icono nombre="Globe" size={24} />} color="bg-[#1b4332]" />
+                            <IndicatorCard label="Población Bajo Cobertura" value={stats?.pobTotal.toLocaleString()} icon={<Icono nombre="Users" size={24} />} color="bg-[#2d6a4f]" />
                         </div>
 
                         <div className="bg-white p-5 rounded-[2.5rem] shadow-xl border border-slate-100 flex flex-col md:flex-row gap-5 items-center">
@@ -467,7 +468,7 @@
                             </div>
                             <div className="flex bg-[#f1f8e9] p-1.5 rounded-[1.8rem] w-full md:w-auto border border-[#d8f3dc]">
                                 {['LOCALIDAD', 'MUNICIPIO', 'UNIDAD'].map((type) => (
-                                    <button key={type} onClick={() => setFilterType(type)} className={`flex-1 md:flex-none px-10 py-3 rounded-[1.3rem] text-[10px] font-black transition-all uppercase tracking-widest ${filterType === type ? 'bg-white text-[#1b4332] shadow-md border border-[#e8f5e9]' : 'text-slate-500 hover:text-[#1b4332]'}`}>
+                                    <button key={type} onClick={() => setFilterType(type)} className={`flex-1 md:flex-none px-6 py-3 rounded-[1.3rem] text-[10px] font-black transition-all uppercase tracking-widest ${filterType === type ? 'bg-white text-[#1b4332] shadow-md border border-[#e8f5e9]' : 'text-slate-500 hover:text-[#1b4332]'}`}>
                                         {type === 'UNIDAD' ? 'UNIDAD / CLUES' : type}
                                     </button>
                                 ))}
@@ -528,7 +529,7 @@
                                                         <div className="flex items-start gap-3 bg-white/5 p-3 rounded-xl border border-white/5">
                                                             <Icono nombre="Map" size={16} className="text-amber-300 mt-0.5" />
                                                             <div>
-                                                                <p className="text-[8px] font-black text-amber-200 uppercase tracking-widest">Jurisdicción</p>
+                                                                <p className="text-[8px] font-black text-amber-200 uppercase tracking-widest">Jurisdicción Sanitaria</p>
                                                                 <p className="text-[10px] font-bold uppercase">{selectedRecord.jur} - {selectedRecord.jurName}</p>
                                                             </div>
                                                         </div>
@@ -559,29 +560,27 @@
                                                         )}
                                                     </div>
                                                     
-                                                    {selectedRecord.type === 'INDIVIDUAL_LOC' && selectedRecord.UNIDAD && (
+                                                    {(selectedRecord.type === 'INDIVIDUAL_LOC' || selectedRecord.type === 'GROUPED_UNIT_INDIVIDUAL') && (
                                                         <div className="flex items-start gap-3 bg-white/5 p-3 rounded-xl border border-white/5 col-span-1 md:col-span-2">
                                                             <Icono nombre="Hospital" size={16} className="text-[#c89e3a] mt-0.5" />
                                                             <div className="flex-1">
-                                                                <p className="text-[8px] font-black text-[#d8f3dc] uppercase tracking-widest">Unidad Médica Asignada</p>
-                                                                <p className="text-[11px] font-bold uppercase leading-tight mb-1">
-                                                                    {selectedRecord.UNIDAD} 
-                                                                    <span className="ml-2 text-amber-300 font-mono text-[11px]">[{selectedRecord.CLUES || 'S/C'}]</span>
+                                                                <p className="text-[8px] font-black text-[#d8f3dc] uppercase tracking-widest">
+                                                                    {selectedRecord.type === 'INDIVIDUAL_LOC' ? 'Unidad Médica Asignada' : 'Unidad Médica'}
                                                                 </p>
-                                                                <div className="flex items-center gap-1.5 mt-1">
-                                                                    <Icono nombre="ShieldCheck" size={10} className="text-amber-300/60" />
-                                                                    <span className="text-[9px] font-bold text-white/70 uppercase tracking-wider">INST: {selectedRecord.nomInst || 'S/I'}</span>
+                                                                <p className="text-[11px] font-bold uppercase leading-tight mb-1">
+                                                                    {selectedRecord.UNIDAD || selectedRecord.title} 
+                                                                    <span className="ml-2 text-amber-300 font-mono text-[11px]">[{selectedRecord.CLUES || selectedRecord.clues || 'S/C'}]</span>
+                                                                </p>
+                                                                <div className="flex flex-wrap gap-x-4 gap-y-1">
+                                                                    <div className="flex items-center gap-1.5 mt-1">
+                                                                        <Icono nombre="ShieldCheck" size={10} className="text-amber-300/60" />
+                                                                        <span className="text-[9px] font-bold text-white/70 uppercase tracking-wider">INST: {selectedRecord.nomInst || selectedRecord.inst || 'S/I'}</span>
+                                                                    </div>
+                                                                    <div className="flex items-center gap-1.5 mt-1">
+                                                                        <Icono nombre="Map" size={10} className="text-amber-300/60" />
+                                                                        <span className="text-[9px] font-bold text-white/70 uppercase tracking-wider">JUR Operativa: {selectedRecord.jur_um || selectedRecord.jur}</span>
+                                                                    </div>
                                                                 </div>
-                                                            </div>
-                                                        </div>
-                                                    )}
-
-                                                    {selectedRecord.type === 'GROUPED_UNIT_INDIVIDUAL' && (
-                                                        <div className="flex items-start gap-3 bg-white/5 p-3 rounded-xl border border-white/5 col-span-1 md:col-span-2">
-                                                            <Icono nombre="ShieldCheck" size={16} className="text-[#c89e3a] mt-0.5" />
-                                                            <div className="flex-1">
-                                                                <p className="text-[8px] font-black text-[#d8f3dc] uppercase tracking-widest">Institución Responsable</p>
-                                                                <p className="text-[11px] font-bold uppercase leading-tight">{selectedRecord.inst}</p>
                                                             </div>
                                                         </div>
                                                     )}
@@ -597,7 +596,7 @@
                                                         <div className="grid gap-3">
                                                             {selectedRecord.type === 'GROUPED_MUN' ? (
                                                                 Object.values(selectedRecord.unidadesData).sort((a,b) => a.nombre.localeCompare(b.nombre)).map((u, i) => (
-                                                                    <div key={i} onClick={() => setModalState({ isOpen: true, unit: u.nombre, localities: u.localities, clues: u.clues })} className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm hover:border-[#1b4332] hover:shadow-md transition-all group/unit cursor-pointer relative overflow-hidden">
+                                                                    <div key={i} onClick={() => setModalState({ isOpen: true, unit: u.nombre, localities: u.localidades, clues: u.clues })} className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm hover:border-[#1b4332] hover:shadow-md transition-all group/unit cursor-pointer relative overflow-hidden">
                                                                         <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover/unit:opacity-100 transition-opacity"><Icono nombre="ChevronRight" size={16} className="text-[#c89e3a]" /></div>
                                                                         <p className="text-[10px] font-black text-slate-700 uppercase leading-tight mb-1 group-hover/unit:text-[#1b4332] pr-6">{u.nombre}</p>
                                                                         <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
@@ -651,7 +650,7 @@
                                         </div>
                                     ) : (
                                         <div className="bg-white rounded-[3rem] p-16 border-4 border-dashed border-[#e8f5e9] text-center flex flex-col items-center justify-center min-h-[500px]">
-                                            <img src={FAVICON_URL} alt="Logo" className="h-20 w-auto opacity-40 grayscale mb-8" />
+                                            <img src={FAVICON_URL} alt="Visitando Corazones" className="h-20 w-auto opacity-40 grayscale mb-8" />
                                             <h4 className="text-[#1b4332] font-black text-xl mb-3 uppercase tracking-widest leading-none">Exploración Regional</h4>
                                             <p className="text-slate-400 text-[10px] font-bold leading-relaxed max-w-[240px] mx-auto uppercase tracking-widest opacity-60 italic text-balance text-balance">Seleccione un registro para visualizar el perfil demográfico operativo.</p>
                                         </div>
