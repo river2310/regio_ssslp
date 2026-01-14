@@ -351,6 +351,40 @@
                     });
                     return Object.values(groupedMun).slice(0, 50);
                 }
+
+                if (filterType === 'UNIDAD') {
+                    const groupedUnits = {};
+                    data.forEach(item => {
+                        const unitName = item.UNIDAD || '';
+                        const clues = item.CLUES || 'S/C';
+                        if (!lowerSearch || normalizeText(unitName).includes(lowerSearch) || normalizeText(clues).includes(lowerSearch)) {
+                            if (!groupedUnits[clues]) {
+                                groupedUnits[clues] = {
+                                    type: 'GROUPED_UNIT_INDIVIDUAL',
+                                    title: unitName,
+                                    clues: clues,
+                                    inst: item.nom_inst || item.NOM_INST || 'S/I',
+                                    jur: item.JUR,
+                                    jurName: item.JUR_NOMBRE || item.NOMBRE,
+                                    localities: [],
+                                    pob_total: 0, pob_s_derecho: 0, pob_imss: 0, pob_issste: 0, pob_imss_bien: 0, pob_bien: 0
+                                };
+                            }
+                            groupedUnits[clues].localities.push({
+                                nombre: item['NOMBRE LOC'] || item['NOMBRE_LOC'],
+                                cveGeo: item.cve_geo,
+                                pobTotal: Number(item.pob_total) || 0
+                            });
+                            groupedUnits[clues].pob_total += Number(item.pob_total) || 0;
+                            groupedUnits[clues].pob_s_derecho += Number(item.pob_s_derecho) || 0;
+                            groupedUnits[clues].pob_imss += Number(item.pob_imss) || 0;
+                            groupedUnits[clues].pob_issste += Number(item.pob_issste) || 0;
+                            groupedUnits[clues].pob_imss_bien += Number(item.pob_imss_bien) || 0;
+                            groupedUnits[clues].pob_bien += Number(item.pob_bien) || 0;
+                        }
+                    });
+                    return Object.values(groupedUnits).slice(0, 50);
+                }
                 return [];
             }, [data, searchTerm, filterType]);
 
@@ -420,8 +454,8 @@
                                 </div>
                                 <input 
                                     type="text"
-                                    placeholder={`Consultar ${filterType.toLowerCase()}...`}
-                                    className="w-full pl-14 pr-12 py-4 rounded-[1.5rem] border-2 border-slate-50 bg-[#f9fafb] focus:bg-white focus:ring-4 focus:ring-[#d8f3dc] focus:border-[#2d6a4f] outline-none transition-all font-bold uppercase text-slate-700"
+                                    placeholder={`Consultar ${filterType === 'UNIDAD' ? 'unidad o clues' : filterType.toLowerCase()}...`}
+                                    className="w-full pl-14 pr-12 py-4 rounded-[1.5rem] border-2 border-slate-50 bg-[#f9fafb] focus:bg-white focus:ring-4 focus:ring-[#d8f3dc] focus:border-[#2d6a4f] outline-none transition-all font-bold uppercase text-slate-700 placeholder:normal-case placeholder:font-normal"
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                 />
@@ -432,9 +466,9 @@
                                 )}
                             </div>
                             <div className="flex bg-[#f1f8e9] p-1.5 rounded-[1.8rem] w-full md:w-auto border border-[#d8f3dc]">
-                                {['LOCALIDAD', 'MUNICIPIO'].map((type) => (
+                                {['LOCALIDAD', 'MUNICIPIO', 'UNIDAD'].map((type) => (
                                     <button key={type} onClick={() => setFilterType(type)} className={`flex-1 md:flex-none px-10 py-3 rounded-[1.3rem] text-[10px] font-black transition-all uppercase tracking-widest ${filterType === type ? 'bg-white text-[#1b4332] shadow-md border border-[#e8f5e9]' : 'text-slate-500 hover:text-[#1b4332]'}`}>
-                                        {type}
+                                        {type === 'UNIDAD' ? 'UNIDAD / CLUES' : type}
                                     </button>
                                 ))}
                             </div>
@@ -449,15 +483,21 @@
                                             <div className="flex justify-between items-center gap-6">
                                                 <div className="flex-1">
                                                     <div className="flex flex-wrap items-center gap-2 mb-2">
-                                                        <span className="text-[9px] font-black bg-[#1b4332] text-white px-3 py-0.5 rounded-full uppercase tracking-tighter">{filterType}</span>
+                                                        <span className="text-[9px] font-black bg-[#1b4332] text-white px-3 py-0.5 rounded-full uppercase tracking-tighter">{item.type === 'GROUPED_UNIT_INDIVIDUAL' ? 'UNIDAD MÉDICA' : filterType}</span>
                                                         <span className="text-[9px] font-black text-[#c89e3a] uppercase tracking-widest bg-slate-50 px-2 py-0.5 rounded-md border border-slate-100 text-balance">JUR {item.jur}: {item.jurName}</span>
                                                         {item.cve_geo && <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">GEO: {item.cve_geo}</span>}
-                                                        {item.cve_mun && <span className="text-[9px] font-black text-blue-600 uppercase tracking-widest bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">CLAVE MUN: {item.cve_mun}</span>}
+                                                        {item.clues && <span className="text-[9px] font-black text-amber-600 uppercase tracking-widest bg-amber-50 px-2 py-0.5 rounded-md border border-amber-100">CLUES: {item.clues}</span>}
                                                     </div>
                                                     <h4 className="font-black text-[#2d3436] text-xl leading-tight uppercase group-hover:text-[#1b4332] transition-colors">{item.title}</h4>
                                                     <p className="text-xs text-slate-400 font-bold uppercase tracking-tight flex items-center gap-2 mt-1">
-                                                        <Icono nombre="MapPin" size={14} className="text-[#c89e3a]" />
-                                                        {item.type === 'INDIVIDUAL_LOC' ? <span className="truncate">{item.municipio_display} | {item.UNIDAD}</span> : 'Concentrado Municipal'}
+                                                        <Icono nombre={item.type === 'GROUPED_UNIT_INDIVIDUAL' ? "ShieldCheck" : "MapPin"} size={14} className="text-[#c89e3a]" />
+                                                        {item.type === 'INDIVIDUAL_LOC' ? (
+                                                            <span className="truncate">{item.municipio_display} | {item.UNIDAD}</span>
+                                                        ) : item.type === 'GROUPED_UNIT_INDIVIDUAL' ? (
+                                                            <span className="truncate">{item.inst}</span>
+                                                        ) : (
+                                                            'Concentrado Municipal'
+                                                        )}
                                                     </p>
                                                 </div>
                                                 <div className="text-right pl-6 border-l border-[#e8f5e9]">
@@ -492,12 +532,16 @@
                                                                 <p className="text-[10px] font-bold uppercase">{selectedRecord.jur} - {selectedRecord.jurName}</p>
                                                             </div>
                                                         </div>
-                                                        {(selectedRecord.cve_geo || selectedRecord.cve_mun) && (
+                                                        {(selectedRecord.cve_geo || selectedRecord.cve_mun || selectedRecord.clues) && (
                                                             <div className="flex items-start gap-3 bg-white/5 p-3 rounded-xl border border-white/5">
                                                                 <Icono nombre="Fingerprint" size={16} className="text-emerald-300 mt-0.5" />
                                                                 <div>
-                                                                    <p className="text-[8px] font-black text-emerald-200 uppercase tracking-widest">{selectedRecord.type === 'INDIVIDUAL_LOC' ? 'Clave Geo' : 'Clave Mun'}</p>
-                                                                    <p className="text-[10px] font-mono font-bold tracking-widest">{selectedRecord.type === 'INDIVIDUAL_LOC' ? selectedRecord.cve_geo : selectedRecord.cve_mun}</p>
+                                                                    <p className="text-[8px] font-black text-emerald-200 uppercase tracking-widest">
+                                                                        {selectedRecord.type === 'INDIVIDUAL_LOC' ? 'Clave Geo' : selectedRecord.type === 'GROUPED_UNIT_INDIVIDUAL' ? 'CLUES' : 'Clave Mun'}
+                                                                    </p>
+                                                                    <p className="text-[10px] font-mono font-bold tracking-widest">
+                                                                        {selectedRecord.type === 'INDIVIDUAL_LOC' ? selectedRecord.cve_geo : selectedRecord.type === 'GROUPED_UNIT_INDIVIDUAL' ? selectedRecord.clues : selectedRecord.cve_mun}
+                                                                    </p>
                                                                 </div>
                                                             </div>
                                                         )}
@@ -531,37 +575,51 @@
                                                             </div>
                                                         </div>
                                                     )}
+
+                                                    {selectedRecord.type === 'GROUPED_UNIT_INDIVIDUAL' && (
+                                                        <div className="flex items-start gap-3 bg-white/5 p-3 rounded-xl border border-white/5 col-span-1 md:col-span-2">
+                                                            <Icono nombre="ShieldCheck" size={16} className="text-[#c89e3a] mt-0.5" />
+                                                            <div className="flex-1">
+                                                                <p className="text-[8px] font-black text-[#d8f3dc] uppercase tracking-widest">Institución Responsable</p>
+                                                                <p className="text-[11px] font-bold uppercase leading-tight">{selectedRecord.inst}</p>
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                             <div className="p-10 space-y-10 max-h-[550px] overflow-y-auto custom-scrollbar bg-[#fcfdfc]">
-                                                {selectedRecord.type === 'GROUPED_MUN' && (
+                                                {(selectedRecord.type === 'GROUPED_MUN' || selectedRecord.type === 'GROUPED_UNIT_INDIVIDUAL') && (
                                                     <section>
                                                         <h5 className="text-[10px] font-black text-[#1b4332] uppercase tracking-[0.2em] mb-5 flex items-center gap-3">
-                                                            <Icono nombre="Stethoscope" size={16} className="text-[#c89e3a]" /> Infraestructura ({Object.keys(selectedRecord.unidadesData).length})
+                                                            <Icono nombre={selectedRecord.type === 'GROUPED_MUN' ? "Stethoscope" : "MapPin"} size={16} className="text-[#c89e3a]" /> 
+                                                            {selectedRecord.type === 'GROUPED_MUN' ? `Infraestructura (${Object.keys(selectedRecord.unidadesData).length})` : `Localidades en Cobertura (${selectedRecord.localities.length})`}
                                                         </h5>
                                                         <div className="grid gap-3">
-                                                            {Object.values(selectedRecord.unidadesData).sort((a,b) => a.nombre.localeCompare(b.nombre)).map((u, i) => (
-                                                                <div 
-                                                                    key={i} 
-                                                                    onClick={() => setModalState({ isOpen: true, unit: u.nombre, localities: u.localidades, clues: u.clues })}
-                                                                    className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm hover:border-[#1b4332] hover:shadow-md transition-all group/unit cursor-pointer relative overflow-hidden"
-                                                                >
-                                                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover/unit:opacity-100 transition-opacity">
-                                                                        <Icono nombre="ChevronRight" size={16} className="text-[#c89e3a]" />
-                                                                    </div>
-                                                                    <p className="text-[10px] font-black text-slate-700 uppercase leading-tight mb-1 group-hover/unit:text-[#1b4332] pr-6">{u.nombre}</p>
-                                                                    <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
-                                                                        <div className="flex items-center gap-1">
-                                                                            <Icono nombre="Hash" size={10} className="text-[#c89e3a]" />
-                                                                            CLUES: {u.clues}
-                                                                        </div>
-                                                                        <div className="flex items-center gap-1">
-                                                                            <Icono nombre="ShieldCheck" size={10} className="text-[#c89e3a]" />
-                                                                            {u.inst}
+                                                            {selectedRecord.type === 'GROUPED_MUN' ? (
+                                                                Object.values(selectedRecord.unidadesData).sort((a,b) => a.nombre.localeCompare(b.nombre)).map((u, i) => (
+                                                                    <div key={i} onClick={() => setModalState({ isOpen: true, unit: u.nombre, localities: u.localities, clues: u.clues })} className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm hover:border-[#1b4332] hover:shadow-md transition-all group/unit cursor-pointer relative overflow-hidden">
+                                                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover/unit:opacity-100 transition-opacity"><Icono nombre="ChevronRight" size={16} className="text-[#c89e3a]" /></div>
+                                                                        <p className="text-[10px] font-black text-slate-700 uppercase leading-tight mb-1 group-hover/unit:text-[#1b4332] pr-6">{u.nombre}</p>
+                                                                        <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
+                                                                            <div className="flex items-center gap-1"><Icono nombre="Hash" size={10} className="text-[#c89e3a]" />CLUES: {u.clues}</div>
+                                                                            <div className="flex items-center gap-1"><Icono nombre="ShieldCheck" size={10} className="text-[#c89e3a]" />{u.inst}</div>
                                                                         </div>
                                                                     </div>
-                                                                </div>
-                                                            ))}
+                                                                ))
+                                                            ) : (
+                                                                selectedRecord.localities.sort((a,b) => a.nombre.localeCompare(b.nombre)).map((loc, i) => (
+                                                                    <div key={i} className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex justify-between items-center group/loc">
+                                                                        <div>
+                                                                            <p className="text-[10px] font-black text-slate-700 uppercase leading-tight mb-1">{loc.nombre}</p>
+                                                                            <div className="flex items-center gap-1.5"><Icono nombre="Users" size={10} className="text-[#c89e3a]" /><p className="text-[9px] font-bold text-slate-400">Población: {loc.pobTotal.toLocaleString()}</p></div>
+                                                                        </div>
+                                                                        <div className="text-right">
+                                                                            <p className="text-[9px] font-black text-slate-300 uppercase mb-0.5">Clave GEO</p>
+                                                                            <p className="text-[10px] font-mono font-bold text-slate-500">{loc.cveGeo}</p>
+                                                                        </div>
+                                                                    </div>
+                                                                ))
+                                                            )}
                                                         </div>
                                                     </section>
                                                 )}
@@ -576,7 +634,7 @@
                                                             <p className="text-4xl font-black tracking-tighter">{Number(selectedRecord.pob_total).toLocaleString()}</p>
                                                         </div>
                                                         <div className="grid grid-cols-2 gap-4">
-                                                            <MetricBox label="Sin Derecho" value={selectedRecord.pob_s_derecho} color="text-slate-500" />
+                                                            <MetricBox label="Sin derechohabiencia" value={selectedRecord.pob_s_derecho} color="text-slate-500" />
                                                             <MetricBox label="IMSS" value={selectedRecord.pob_imss} color="text-[#2d6a4f]" />
                                                             <MetricBox label="ISSSTE" value={selectedRecord.pob_issste} color="text-[#1a3a5f]" />
                                                             <MetricBox label="IMSS BIENESTAR" value={selectedRecord.pob_imss_bien} color="text-[#065f46]" />
@@ -586,22 +644,14 @@
                                                 </section>
 
                                                 {selectedRecord.type === 'INDIVIDUAL_LOC' && selectedRecord.lat && selectedRecord.lng && (
-                                                    <LocalidadMap 
-                                                        lat={selectedRecord.lat} 
-                                                        lng={selectedRecord.lng} 
-                                                        title={selectedRecord.title} 
-                                                        cveGeo={selectedRecord.cve_geo}
-                                                        munName={selectedRecord.municipio_display}
-                                                        cveMun={selectedRecord.cve_mun}
-                                                    />
+                                                    <LocalidadMap lat={selectedRecord.lat} lng={selectedRecord.lng} title={selectedRecord.title} cveGeo={selectedRecord.cve_geo} munName={selectedRecord.municipio_display} cveMun={selectedRecord.cve_mun} />
                                                 )}
                                             </div>
-                                            <div className="p-6 bg-slate-50 text-center border-t border-slate-100">
-                                            </div>
+                                            <div className="p-6 bg-slate-50 text-center border-t border-slate-100"></div>
                                         </div>
                                     ) : (
                                         <div className="bg-white rounded-[3rem] p-16 border-4 border-dashed border-[#e8f5e9] text-center flex flex-col items-center justify-center min-h-[500px]">
-                                            <img src={FAVICON_URL} alt="Visitando Corazones" className="h-20 w-auto opacity-40 grayscale mb-8" />
+                                            <img src={FAVICON_URL} alt="Logo" className="h-20 w-auto opacity-40 grayscale mb-8" />
                                             <h4 className="text-[#1b4332] font-black text-xl mb-3 uppercase tracking-widest leading-none">Exploración Regional</h4>
                                             <p className="text-slate-400 text-[10px] font-bold leading-relaxed max-w-[240px] mx-auto uppercase tracking-widest opacity-60 italic text-balance text-balance">Seleccione un registro para visualizar el perfil demográfico operativo.</p>
                                         </div>
