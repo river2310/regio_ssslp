@@ -5,33 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Regionalización | Visitando Corazones</title>
     
-    <!-- Scripts Base -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     
-    <!-- Configuración Global Crítica -->
     <script>
         window.React = React;
         window.ReactDOM = ReactDOM;
     </script>
 
-    <!-- Librerías Adicionales -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     
-    <!-- Leaflet CSS y JS para el Mapa -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <style>
-        /* Estilos de scrollbar personalizados */
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #d8f3dc; border-radius: 10px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #1b4332; }
         
-        /* Animaciones */
         @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
         @keyframes slide-right { from { transform: translateX(30px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         
@@ -41,7 +35,6 @@
         
         body { background-color: #fcfdfc; margin: 0; padding: 0; }
 
-        /* Estilo para el contenedor del mapa */
         #map-display {
             height: 280px;
             width: 100%;
@@ -49,7 +42,6 @@
             z-index: 10;
         }
 
-        /* Ajuste de estilo para el popup de Leaflet */
         .leaflet-popup-content-wrapper {
             border-radius: 12px;
             padding: 4px;
@@ -67,9 +59,6 @@
     <script type="text/babel">
         const { useState, useMemo, useEffect, useRef } = React;
         
-        /**
-         * CONFIGURACIÓN DE DATOS E IDENTIDAD
-         */
         const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQTyXeda4MphOJX65C0n5DYQamD0JqUtLIJJio7qDV_yZk6t5PQV04LSrRHoZv1udCCNPsufqw2vIZi/pub?gid=0&single=true&output=csv';
         const LOGO_URL = 'https://d3dac9gdq8t83x.cloudfront.net/media/static/images/hor-verde.png';
         const FAVICON_URL = 'https://d3dac9gdq8t83x.cloudfront.net/media/static/images/favicons/logo-verde.png';
@@ -82,9 +71,6 @@
             border: '#e8f5e9'
         };
 
-        /**
-         * COMPONENTE DE ICONO REACTIVO
-         */
         const Icono = ({ nombre, size = 24, className = "" }) => {
             if (!window.lucide || !window.lucide.icons) return null;
 
@@ -114,9 +100,6 @@
             );
         };
 
-        /**
-         * COMPONENTE DEL MAPA
-         */
         const LocalidadMap = ({ lat, lng, title, cveGeo, munName, cveMun }) => {
             const leafletMap = useRef(null);
 
@@ -279,7 +262,7 @@
                                     UNIDAD: unit,
                                     CLUES: item.CLUES,
                                     CVE_CORTA_INST: item.CVE_CORTA_INST,
-                                    nomInst: item.nom_inst || item.NOM_INST || 'N/A', // Captura de Institución
+                                    nomInst: item.nom_inst || item.NOM_INST || 'N/A',
                                     jur: item.JUR,
                                     jurName: item.JUR_NOMBRE || item.NOMBRE,
                                     cve_geo: item.cve_geo,
@@ -317,7 +300,6 @@
                                 };
                             }
                             if (item.UNIDAD) {
-                                // Para municipios, mostramos unidad [CLUES] Institución
                                 const label = `${item.UNIDAD} [${item.CLUES || 'S/C'}] ${item.nom_inst || item.NOM_INST || ''}`;
                                 groupedMun[key].unidades.add(label.trim());
                             }
@@ -486,22 +468,18 @@
                                                         )}
                                                     </div>
                                                     
-                                                    {/* SECCIÓN ACTUALIZADA: Unidad Médica Asignada + CLUES + Institución */}
                                                     {selectedRecord.UNIDAD && (
                                                         <div className="flex items-start gap-3 bg-white/5 p-3 rounded-xl border border-white/5 col-span-1 md:col-span-2">
                                                             <Icono nombre="Hospital" size={16} className="text-[#c89e3a] mt-0.5" />
                                                             <div className="flex-1">
                                                                 <p className="text-[8px] font-black text-[#d8f3dc] uppercase tracking-widest">Unidad Médica Asignada</p>
-                                                                <p className="text-[11px] font-bold uppercase leading-tight mb-1">{selectedRecord.UNIDAD}</p>
-                                                                <div className="flex flex-wrap gap-x-4 gap-y-1">
-                                                                    <div className="flex items-center gap-1.5">
-                                                                        <Icono nombre="Hash" size={10} className="text-amber-300" />
-                                                                        <span className="text-[9px] font-mono text-white/70">CLUES: {selectedRecord.CLUES || 'S/C'}</span>
-                                                                    </div>
-                                                                    <div className="flex items-center gap-1.5">
-                                                                        <Icono nombre="ShieldCheck" size={10} className="text-amber-300" />
-                                                                        <span className="text-[9px] font-bold text-white/70 uppercase">INST: {selectedRecord.nomInst || 'S/I'}</span>
-                                                                    </div>
+                                                                <p className="text-[11px] font-bold uppercase leading-tight mb-1">
+                                                                    {selectedRecord.UNIDAD} 
+                                                                    <span className="ml-2 text-amber-300 font-mono text-[11px]">[{selectedRecord.CLUES || 'S/C'}]</span>
+                                                                </p>
+                                                                <div className="flex items-center gap-1.5 mt-1">
+                                                                    <Icono nombre="ShieldCheck" size={10} className="text-amber-300/60" />
+                                                                    <span className="text-[9px] font-bold text-white/70 uppercase tracking-wider">INST: {selectedRecord.nomInst || 'S/I'}</span>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -516,7 +494,6 @@
                                                         </h5>
                                                         <div className="grid gap-3">
                                                             {Array.from(selectedRecord.unidades).map((u, i) => {
-                                                                // Regex para separar info en municipios: Unidad [CLUES] Institución
                                                                 const parts = u.match(/(.*) \[(.*)\] (.*)/) || u.match(/(.*) \[(.*)\]/);
                                                                 return parts ? (
                                                                     <div key={i} className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm hover:border-[#1b4332] transition-colors group/unit">
