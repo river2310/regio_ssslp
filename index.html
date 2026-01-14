@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Regionalización | Visitando Corazones</title>
+    <title>Regionalización Operativa</title>
     
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -194,6 +194,7 @@
                 link.rel = 'shortcut icon';
                 link.href = FAVICON_URL;
                 document.getElementsByTagName('head')[0].appendChild(link);
+                document.title = "Regionalización Operativa";
                 fetchData();
             }, []);
 
@@ -547,7 +548,6 @@
                                                 )}
                                             </div>
                                             <div className="p-6 bg-slate-50 text-center border-t border-slate-100">
-                                                <p className="text-[9px] font-black text-slate-300 uppercase tracking-[0.3em]">Visitando Corazones • 2026</p>
                                             </div>
                                         </div>
                                     ) : (
