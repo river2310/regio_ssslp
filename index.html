@@ -8,14 +8,24 @@
     <!-- Scripts Base -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Configuración Global Crítica -->
+    <script>
+        window.React = React;
+        window.ReactDOM = ReactDOM;
+    </script>
+
+    <!-- Librerías Adicionales -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Librería Lucide Core (Datos de iconos puros) -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Leaflet CSS y JS para el Mapa -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <style>
-        /* Personalización de la barra de desplazamiento */
+        /* Estilos de scrollbar personalizados */
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #d8f3dc; border-radius: 10px; }
@@ -30,6 +40,25 @@
         .slide-in-from-right { animation-name: slide-right; }
         
         body { background-color: #fcfdfc; margin: 0; padding: 0; }
+
+        /* Estilo para el contenedor del mapa */
+        #map-display {
+            height: 280px;
+            width: 100%;
+            border-radius: 1.5rem;
+            z-index: 10;
+        }
+
+        /* Ajuste de estilo para el popup de Leaflet */
+        .leaflet-popup-content-wrapper {
+            border-radius: 12px;
+            padding: 4px;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+        }
+        .leaflet-popup-content {
+            margin: 12px;
+            line-height: 1.4;
+        }
     </style>
 </head>
 <body>
@@ -37,7 +66,7 @@
 
     <script type="text/babel">
         const { useState, useMemo, useEffect, useRef } = React;
-
+        
         /**
          * CONFIGURACIÓN DE DATOS E IDENTIDAD
          */
@@ -54,22 +83,16 @@
         };
 
         /**
-         * COMPONENTE DE ICONO REACTIVO (SOLUCIÓN DEFINITIVA)
-         * Renderiza el contenido SVG de Lucide sin depender de toSvg() o forwardRef
+         * COMPONENTE DE ICONO REACTIVO
          */
         const Icono = ({ nombre, size = 24, className = "" }) => {
             if (!window.lucide || !window.lucide.icons) return null;
 
-            // Normalizar nombre de PascalCase a kebab-case (ej: MapPin -> map-pin)
-            const normalizedName = nombre
-                .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
-                .toLowerCase();
-            
+            const normalizedName = nombre.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
             const iconData = window.lucide.icons[nombre] || window.lucide.icons[normalizedName];
 
             if (!iconData) return <div style={{ width: size, height: size }} className="bg-slate-100 rounded-sm" />;
 
-            // iconData[1] contiene el array de elementos [tagName, attributes]
             return (
                 <svg
                     width={size}
@@ -92,8 +115,67 @@
         };
 
         /**
-         * COMPONENTES DE PRESENTACIÓN
+         * COMPONENTE DEL MAPA
          */
+        const LocalidadMap = ({ lat, lng, title, cveGeo, munName, cveMun }) => {
+            const leafletMap = useRef(null);
+
+            useEffect(() => {
+                if (!lat || !lng) return;
+
+                if (!leafletMap.current) {
+                    leafletMap.current = L.map('map-display', {
+                        center: [lat, lng],
+                        zoom: 14,
+                        scrollWheelZoom: false
+                    });
+
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '&copy; OpenStreetMap'
+                    }).addTo(leafletMap.current);
+                } else {
+                    leafletMap.current.setView([lat, lng], 14);
+                }
+
+                leafletMap.current.eachLayer((layer) => {
+                    if (layer instanceof L.Marker) {
+                        leafletMap.current.removeLayer(layer);
+                    }
+                });
+
+                const popupContent = `
+                    <div style="font-family: sans-serif;">
+                        <div style="color: #1b4332; font-weight: 900; font-size: 13px; text-transform: uppercase; margin-bottom: 4px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px;">
+                            ${title}
+                        </div>
+                        <div style="margin-bottom: 6px;">
+                            <div style="color: #64748b; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;">Municipio</div>
+                            <div style="color: #1e293b; font-size: 11px; font-weight: 700;">${munName} <span style="color: #c89e3a;">(${cveMun || 'S/C'})</span></div>
+                        </div>
+                        <div>
+                            <div style="color: #64748b; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;">Clave Geoestadística</div>
+                            <div style="color: #2d6a4f; font-family: monospace; font-size: 11px; font-weight: 700;">${cveGeo || 'N/A'}</div>
+                        </div>
+                    </div>
+                `;
+
+                L.marker([lat, lng]).addTo(leafletMap.current)
+                    .bindPopup(popupContent)
+                    .openPopup();
+
+            }, [lat, lng, title, cveGeo, munName, cveMun]);
+
+            return (
+                <div className="space-y-3 pt-4 border-t border-slate-100 animate-in fade-in duration-700">
+                    <div className="flex items-center gap-2 text-[#1b4332]">
+                        <Icono nombre="Map" size={16} className="text-[#c89e3a]" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Ubicación Geográfica</span>
+                    </div>
+                    <div id="map-display" className="border-2 border-slate-100 shadow-inner overflow-hidden"></div>
+                </div>
+            );
+        };
+
         const IndicatorCard = ({ label, value, icon, color }) => (
             <div className="bg-white p-8 rounded-[2.5rem] shadow-lg border border-slate-50 flex items-center gap-6 transition-all hover:shadow-2xl hover:-translate-y-1 border-b-[6px] border-transparent hover:border-[#c89e3a] group">
                 <div className={`${color} p-5 rounded-2xl text-white shadow-lg transform group-hover:rotate-6 transition-transform duration-500`}>
@@ -115,9 +197,6 @@
             </div>
         );
 
-        /**
-         * APLICACIÓN PRINCIPAL
-         */
         const App = () => {
             const [data, setData] = useState([]);
             const [loading, setLoading] = useState(true);
@@ -127,7 +206,6 @@
             const [selectedRecord, setSelectedRecord] = useState(null);
 
             useEffect(() => {
-                // Favicon y Carga de datos
                 const link = document.querySelector("link[rel~='icon']") || document.createElement('link');
                 link.type = 'image/png';
                 link.rel = 'shortcut icon';
@@ -163,8 +241,8 @@
                     const result = [];
                     for (let i = 1; i < lines.length; i++) {
                         if (!lines[i].trim()) continue;
-                        const currentline = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
                         const obj = {};
+                        const currentline = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
                         headers.forEach((header, index) => {
                             obj[header] = currentline[index] ? currentline[index].replace(/"/g, '').trim() : '';
                         });
@@ -201,9 +279,13 @@
                                     UNIDAD: unit,
                                     CLUES: item.CLUES,
                                     CVE_CORTA_INST: item.CVE_CORTA_INST,
+                                    nomInst: item.nom_inst || item.NOM_INST || 'N/A', // Captura de Institución
                                     jur: item.JUR,
                                     jurName: item.JUR_NOMBRE || item.NOMBRE,
                                     cve_geo: item.cve_geo,
+                                    cve_mun: item.CVE_MUN_ATIENDE,
+                                    lat: parseFloat(item.latitud),
+                                    lng: parseFloat(item.longitud),
                                     pob_total: 0, pob_s_derecho: 0, pob_imss: 0, pob_issste: 0, pob_bien: 0
                                 };
                             }
@@ -234,7 +316,11 @@
                                     pob_total: 0, pob_s_derecho: 0, pob_imss: 0, pob_issste: 0, pob_bien: 0
                                 };
                             }
-                            if (item.UNIDAD) groupedMun[key].unidades.add(`${item.UNIDAD} [${item.CLUES || 'S/C'}]`);
+                            if (item.UNIDAD) {
+                                // Para municipios, mostramos unidad [CLUES] Institución
+                                const label = `${item.UNIDAD} [${item.CLUES || 'S/C'}] ${item.nom_inst || item.NOM_INST || ''}`;
+                                groupedMun[key].unidades.add(label.trim());
+                            }
                             groupedMun[key].pob_total += Number(item.pob_total) || 0;
                             groupedMun[key].pob_s_derecho += Number(item.pob_s_derecho) || 0;
                             groupedMun[key].pob_imss += Number(item.pob_imss) || 0;
@@ -259,7 +345,7 @@
                 return (
                     <div className="flex flex-col items-center justify-center min-h-screen gap-8">
                         <img src={FAVICON_URL} alt="Cargando" className="h-20 w-auto animate-bounce" />
-                        <p className="font-black text-[#1b4332] uppercase tracking-[0.4em] text-xl animate-pulse">Regionalización</p>
+                        <p className="font-black text-[#1b4332] uppercase tracking-[0.4em] text-xl animate-pulse">Sincronizando</p>
                     </div>
                 );
             }
@@ -273,7 +359,7 @@
                                     <img src={LOGO_URL} alt="Visitando Corazones" className="h-12 w-auto object-contain" />
                                 </div>
                                 <div>
-                                    <h1 className="text-xl md:text-2xl font-black tracking-tight uppercase leading-none">Regionalización Operativa</h1>
+                                    <h1 className="text-xl md:text-2xl font-black tracking-tight uppercase leading-none text-balance">Regionalización Operativa</h1>
                                     <div className="flex items-center gap-2 mt-1">
                                         <span className="h-1.5 w-1.5 rounded-full bg-[#95d5b2] animate-pulse"></span>
                                         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#d8f3dc]">Sistema de consulta</p>
@@ -285,7 +371,7 @@
                                     <Icono nombre="RefreshCw" size={18} />
                                 </button>
                                 <div className="h-8 w-[1px] bg-white/10 mx-1"></div>
-                                <div className="bg-white/10 px-4 py-2 rounded-xl border border-white/5">
+                                <div className="bg-white/10 px-4 py-2 rounded-xl flex items-center gap-3 border border-white/5">
                                     <span className="text-[10px] font-black uppercase tracking-widest leading-none text-white/80">ver. 21.10.2025</span>
                                 </div>
                             </div>
@@ -335,14 +421,14 @@
                                                 <div className="flex-1">
                                                     <div className="flex flex-wrap items-center gap-2 mb-2">
                                                         <span className="text-[9px] font-black bg-[#1b4332] text-white px-3 py-0.5 rounded-full uppercase tracking-tighter">{filterType}</span>
-                                                        <span className="text-[9px] font-black text-[#c89e3a] uppercase tracking-widest bg-slate-50 px-2 py-0.5 rounded-md border border-slate-100">JUR {item.jur}: {item.jurName}</span>
+                                                        <span className="text-[9px] font-black text-[#c89e3a] uppercase tracking-widest bg-slate-50 px-2 py-0.5 rounded-md border border-slate-100 text-balance">JUR {item.jur}: {item.jurName}</span>
                                                         {item.cve_geo && <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">GEO: {item.cve_geo}</span>}
                                                         {item.cve_mun && <span className="text-[9px] font-black text-blue-600 uppercase tracking-widest bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">CLAVE MUN: {item.cve_mun}</span>}
                                                     </div>
                                                     <h4 className="font-black text-[#2d3436] text-xl leading-tight uppercase group-hover:text-[#1b4332] transition-colors">{item.title}</h4>
                                                     <p className="text-xs text-slate-400 font-bold uppercase tracking-tight flex items-center gap-2 mt-1">
                                                         <Icono nombre="MapPin" size={14} className="text-[#c89e3a]" />
-                                                        {item.type === 'INDIVIDUAL_LOC' ? <span className="truncate">{item.municipio_display} | {item.UNIDAD}</span> : 'Concentrado Territorial'}
+                                                        {item.type === 'INDIVIDUAL_LOC' ? <span className="truncate">{item.municipio_display} | {item.UNIDAD}</span> : 'Concentrado Municipal'}
                                                     </p>
                                                 </div>
                                                 <div className="text-right pl-6 border-l border-[#e8f5e9]">
@@ -367,7 +453,7 @@
                                                     <Icono nombre="ShieldCheck" size={18} className="text-[#c89e3a]" />
                                                     <span className="text-[10px] font-black uppercase tracking-[0.3em] text-[#d8f3dc]">Ficha Operativa</span>
                                                 </div>
-                                                <h4 className="font-black text-3xl leading-tight uppercase mb-8">{selectedRecord.title}</h4>
+                                                <h4 className="font-black text-3xl leading-tight uppercase mb-8 text-balance">{selectedRecord.title}</h4>
                                                 <div className="space-y-4 pt-6 border-t border-white/10">
                                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                                         <div className="flex items-start gap-3 bg-white/5 p-3 rounded-xl border border-white/5">
@@ -386,19 +472,43 @@
                                                                 </div>
                                                             </div>
                                                         )}
+                                                        
+                                                        {selectedRecord.type === 'INDIVIDUAL_LOC' && (
+                                                            <div className="flex items-start gap-3 bg-white/5 p-3 rounded-xl border border-white/5 col-span-1 md:col-span-2">
+                                                                <Icono nombre="MapPin" size={16} className="text-blue-300 mt-0.5" />
+                                                                <div>
+                                                                    <p className="text-[8px] font-black text-blue-200 uppercase tracking-widest">Municipio Perteneciente</p>
+                                                                    <p className="text-[10px] font-bold uppercase">
+                                                                        {selectedRecord.municipio_display} <span className="text-blue-300 font-normal">({selectedRecord.cve_mun || 'S/C'})</span>
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                        )}
                                                     </div>
+                                                    
+                                                    {/* SECCIÓN ACTUALIZADA: Unidad Médica Asignada + CLUES + Institución */}
                                                     {selectedRecord.UNIDAD && (
-                                                        <div className="flex items-start gap-3 bg-white/5 p-3 rounded-xl border border-white/5">
+                                                        <div className="flex items-start gap-3 bg-white/5 p-3 rounded-xl border border-white/5 col-span-1 md:col-span-2">
                                                             <Icono nombre="Hospital" size={16} className="text-[#c89e3a] mt-0.5" />
-                                                            <div>
-                                                                <p className="text-[8px] font-black text-[#d8f3dc] uppercase tracking-widest">Unidad Médica</p>
-                                                                <p className="text-[11px] font-bold uppercase">{selectedRecord.UNIDAD}</p>
+                                                            <div className="flex-1">
+                                                                <p className="text-[8px] font-black text-[#d8f3dc] uppercase tracking-widest">Unidad Médica Asignada</p>
+                                                                <p className="text-[11px] font-bold uppercase leading-tight mb-1">{selectedRecord.UNIDAD}</p>
+                                                                <div className="flex flex-wrap gap-x-4 gap-y-1">
+                                                                    <div className="flex items-center gap-1.5">
+                                                                        <Icono nombre="Hash" size={10} className="text-amber-300" />
+                                                                        <span className="text-[9px] font-mono text-white/70">CLUES: {selectedRecord.CLUES || 'S/C'}</span>
+                                                                    </div>
+                                                                    <div className="flex items-center gap-1.5">
+                                                                        <Icono nombre="ShieldCheck" size={10} className="text-amber-300" />
+                                                                        <span className="text-[9px] font-bold text-white/70 uppercase">INST: {selectedRecord.nomInst || 'S/I'}</span>
+                                                                    </div>
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     )}
                                                 </div>
                                             </div>
-                                            <div className="p-10 space-y-10 max-h-[450px] overflow-y-auto custom-scrollbar bg-[#fcfdfc]">
+                                            <div className="p-10 space-y-10 max-h-[550px] overflow-y-auto custom-scrollbar bg-[#fcfdfc]">
                                                 {selectedRecord.type === 'GROUPED_MUN' && (
                                                     <section>
                                                         <h5 className="text-[10px] font-black text-[#1b4332] uppercase tracking-[0.2em] mb-5 flex items-center gap-3">
@@ -406,19 +516,30 @@
                                                         </h5>
                                                         <div className="grid gap-3">
                                                             {Array.from(selectedRecord.unidades).map((u, i) => {
-                                                                const parts = u.match(/(.*) \[(.*)\]/);
+                                                                // Regex para separar info en municipios: Unidad [CLUES] Institución
+                                                                const parts = u.match(/(.*) \[(.*)\] (.*)/) || u.match(/(.*) \[(.*)\]/);
                                                                 return parts ? (
                                                                     <div key={i} className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm hover:border-[#1b4332] transition-colors group/unit">
                                                                         <p className="text-[10px] font-black text-slate-700 uppercase leading-tight mb-1">{parts[1]}</p>
-                                                                        <div className="flex items-center gap-1 text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
-                                                                            <Icono nombre="Hash" size={10} className="text-[#c89e3a]" />CLUES: {parts[2]}
+                                                                        <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
+                                                                            <div className="flex items-center gap-1">
+                                                                                <Icono nombre="Hash" size={10} className="text-[#c89e3a]" />
+                                                                                CLUES: {parts[2]}
+                                                                            </div>
+                                                                            {parts[3] && (
+                                                                                <div className="flex items-center gap-1">
+                                                                                    <Icono nombre="ShieldCheck" size={10} className="text-[#c89e3a]" />
+                                                                                    {parts[3]}
+                                                                                </div>
+                                                                            )}
                                                                         </div>
                                                                     </div>
-                                                                ) : <div key={i} className="text-xs">{u}</div>;
+                                                                ) : <div key={i} className="text-xs p-2 bg-slate-50 rounded-lg">{u}</div>;
                                                             })}
                                                         </div>
                                                     </section>
                                                 )}
+                                                
                                                 <section>
                                                     <h5 className="text-[10px] font-black text-[#1b4332] uppercase tracking-[0.2em] mb-6 flex items-center gap-3">
                                                         <Icono nombre="Activity" size={16} className="text-[#c89e3a]" /> Perfil de Cobertura
@@ -436,6 +557,17 @@
                                                         </div>
                                                     </div>
                                                 </section>
+
+                                                {selectedRecord.type === 'INDIVIDUAL_LOC' && selectedRecord.lat && selectedRecord.lng && (
+                                                    <LocalidadMap 
+                                                        lat={selectedRecord.lat} 
+                                                        lng={selectedRecord.lng} 
+                                                        title={selectedRecord.title} 
+                                                        cveGeo={selectedRecord.cve_geo}
+                                                        munName={selectedRecord.municipio_display}
+                                                        cveMun={selectedRecord.cve_mun}
+                                                    />
+                                                )}
                                             </div>
                                             <div className="p-6 bg-slate-50 text-center border-t border-slate-100">
                                                 <p className="text-[9px] font-black text-slate-300 uppercase tracking-[0.3em]">Visitando Corazones • 2026</p>
@@ -445,7 +577,7 @@
                                         <div className="bg-white rounded-[3rem] p-16 border-4 border-dashed border-[#e8f5e9] text-center flex flex-col items-center justify-center min-h-[500px]">
                                             <img src={FAVICON_URL} alt="Visitando Corazones" className="h-20 w-auto opacity-40 grayscale mb-8" />
                                             <h4 className="text-[#1b4332] font-black text-xl mb-3 uppercase tracking-widest leading-none">Exploración Regional</h4>
-                                            <p className="text-slate-400 text-[10px] font-bold leading-relaxed max-w-[240px] mx-auto uppercase tracking-widest opacity-60 italic text-balance">Seleccione un registro para visualizar el perfil demográfico operativo.</p>
+                                            <p className="text-slate-400 text-[10px] font-bold leading-relaxed max-w-[240px] mx-auto uppercase tracking-widest opacity-60 italic text-balance text-balance">Seleccione un registro para visualizar el perfil demográfico operativo.</p>
                                         </div>
                                     )}
                                 </div>
