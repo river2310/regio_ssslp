@@ -119,7 +119,7 @@
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 whitespace-normal leading-relaxed">{position}</p>
                     <a href={`mailto:${email}`} className="text-[11px] font-medium text-[#2d6a4f] hover:underline flex items-center gap-1 mt-1.5 lowercase">
                         <Icono nombre="Mail" size={12} />
-                        {email}
+                        <span className="ml-1">{email}</span>
                     </a>
                 </div>
                 <div className="contact-action opacity-0 transform translate-x-2 transition-all duration-300 hidden md:block">
@@ -130,8 +130,14 @@
             </div>
         );
 
-        const ModalLocalidades = ({ isOpen, onClose, unidadNombre, localidades, clues }) => {
+        const ModalLocalidades = ({ isOpen, onClose, unidadNombre, localidades = [], clues }) => {
             if (!isOpen) return null;
+
+            const sortedLocs = useMemo(() => {
+                if (!Array.isArray(localidades)) return [];
+                return [...localidades].sort((a, b) => (a.nombre || "").localeCompare(b.nombre || ""));
+            }, [localidades]);
+
             return (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 modal-overlay animate-in fade-in duration-300">
                     <div className="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden animate-in slide-up duration-500 max-h-[85vh] flex flex-col">
@@ -141,8 +147,8 @@
                                     <Icono nombre="Hospital" size={16} className="text-[#c89e3a]" />
                                     <span className="text-[10px] font-black uppercase tracking-widest text-[#d8f3dc]">Cobertura de Unidad</span>
                                 </div>
-                                <h3 className="text-xl font-black uppercase leading-tight">{unidadNombre}</h3>
-                                <p className="text-[10px] font-mono text-white/60 mt-1 uppercase tracking-widest">CLUES: {clues}</p>
+                                <h3 className="text-xl font-black uppercase leading-tight">{unidadNombre || 'Unidad Médica'}</h3>
+                                <p className="text-[10px] font-mono text-white/60 mt-1 uppercase tracking-widest">CLUES: {clues || 'S/C'}</p>
                             </div>
                             <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors">
                                 <Icono nombre="X" size={24} />
@@ -152,21 +158,21 @@
                         <div className="p-8 overflow-y-auto custom-scrollbar flex-1 bg-slate-50">
                             <div className="flex items-center gap-2 mb-6">
                                 <Icono nombre="MapPin" size={18} className="text-[#c89e3a]" />
-                                <span className="text-[11px] font-black uppercase tracking-[0.2em] text-[#2d6a4f]">Localidades vinculadas ({localidades.length})</span>
+                                <span className="text-[11px] font-black uppercase tracking-[0.2em] text-[#2d6a4f]">Localidades vinculadas ({sortedLocs.length})</span>
                             </div>
                             <div className="grid gap-3">
-                                {localidades.sort((a,b) => a.nombre.localeCompare(b.nombre)).map((loc, idx) => (
+                                {sortedLocs.map((loc, idx) => (
                                     <div key={idx} className="bg-white p-4 rounded-2xl border border-slate-200 flex justify-between items-center group hover:border-[#2d6a4f] transition-all shadow-sm">
                                         <div>
-                                            <p className="text-xs font-black text-slate-700 uppercase group-hover:text-[#2d6a4f] transition-colors">{loc.nombre}</p>
+                                            <p className="text-xs font-black text-slate-700 uppercase group-hover:text-[#2d6a4f] transition-colors">{loc.nombre || 'N/A'}</p>
                                             <div className="flex items-center gap-1.5 mt-1">
                                                 <Icono nombre="Users" size={10} className="text-[#c89e3a]" />
-                                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Población: {loc.pobTotal.toLocaleString()}</p>
+                                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Población: {Number(loc.pobTotal || 0).toLocaleString()}</p>
                                             </div>
                                         </div>
                                         <div className="text-right">
                                             <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest mb-0.5">Clave GEO</p>
-                                            <p className="text-[10px] font-mono font-bold text-slate-500">{loc.cveGeo}</p>
+                                            <p className="text-[10px] font-mono font-bold text-slate-500">{loc.cveGeo || 'S/C'}</p>
                                         </div>
                                     </div>
                                 ))}
@@ -237,7 +243,7 @@
             const [filterType, setFilterType] = useState('LOCALIDAD');
             const [selectedRecord, setSelectedRecord] = useState(null);
             
-            const [modalState, setModalState] = useState({ isOpen: false, unit: null, localities: [], clues: '' });
+            const [modalState, setModalState] = useState({ isOpen: false, unit: null, localidades: [], clues: '' });
 
             useEffect(() => {
                 const link = document.querySelector("link[rel~='icon']") || document.createElement('link');
@@ -359,7 +365,7 @@
                                         nombre: item.UNIDAD,
                                         inst: item.nom_inst || item.NOM_INST || 'S/I',
                                         clues: clues,
-                                        localidades: []
+                                        localidades: [] // UNIFICADO: localidades
                                     };
                                 }
                                 groupedMun[key].unidadesData[clues].localidades.push({
@@ -393,11 +399,11 @@
                                     inst: item.nom_inst || item.NOM_INST || 'S/I',
                                     jur: item.JUR,
                                     jurName: item.JUR_NOMBRE || item.NOMBRE,
-                                    localities: [],
+                                    localidades: [], // UNIFICADO: localidades
                                     pob_total: 0, pob_s_derecho: 0, pob_imss: 0, pob_issste: 0, pob_imss_bien: 0, pob_bien: 0
                                 };
                             }
-                            groupedUnits[clues].localities.push({
+                            groupedUnits[clues].localidades.push({
                                 nombre: item['NOMBRE LOC'] || item['NOMBRE_LOC'],
                                 cveGeo: item.cve_geo,
                                 pobTotal: Number(item.pob_total) || 0
@@ -438,7 +444,7 @@
                         isOpen={modalState.isOpen} 
                         onClose={() => setModalState({ ...modalState, isOpen: false })}
                         unidadNombre={modalState.unit}
-                        localidades={modalState.localities}
+                        localidades={modalState.localidades}
                         clues={modalState.clues}
                     />
 
@@ -534,7 +540,7 @@
                                                     </div>
                                                     <div className="text-right pl-6 border-l border-[#e8f5e9]">
                                                         <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest mb-0.5">Población</p>
-                                                        <p className="text-2xl font-black text-[#2d6a4f] tracking-tighter leading-none">{item.pob_total.toLocaleString()}</p>
+                                                        <p className="text-2xl font-black text-[#2d6a4f] tracking-tighter leading-none">{Number(item.pob_total || 0).toLocaleString()}</p>
                                                     </div>
                                                 </div>
                                             </div>
@@ -586,30 +592,34 @@
                                                     <section>
                                                         <h5 className="text-[10px] font-black text-[#2d6a4f] uppercase tracking-[0.2em] mb-5 flex items-center gap-3">
                                                             <Icono nombre={selectedRecord.type === 'GROUPED_MUN' ? "Stethoscope" : "MapPin"} size={16} className="text-[#c89e3a]" /> 
-                                                            {selectedRecord.type === 'GROUPED_MUN' ? `Infraestructura (${Object.keys(selectedRecord.unidadesData).length})` : `Localidades en Cobertura (${selectedRecord.localities.length})`}
+                                                            {selectedRecord.type === 'GROUPED_MUN' ? `Infraestructura (${Object.keys(selectedRecord.unidadesData || {}).length})` : `Localidades en Cobertura (${(selectedRecord.localidades || []).length})`}
                                                         </h5>
                                                         <div className="grid gap-3">
                                                             {selectedRecord.type === 'GROUPED_MUN' ? (
-                                                                Object.values(selectedRecord.unidadesData).sort((a,b) => a.nombre.localeCompare(b.nombre)).map((u, i) => (
-                                                                    <div key={i} onClick={() => setModalState({ isOpen: true, unit: u.nombre, localities: u.localities, clues: u.clues })} className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm hover:border-[#2d6a4f] hover:shadow-md transition-all group/unit cursor-pointer relative overflow-hidden">
+                                                                Object.values(selectedRecord.unidadesData || {}).sort((a,b) => (a.nombre || "").localeCompare(b.nombre || "")).map((u, i) => (
+                                                                    <div 
+                                                                        key={i} 
+                                                                        onClick={() => setModalState({ isOpen: true, unit: u.nombre, localidades: u.localidades, clues: u.clues })} 
+                                                                        className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm hover:border-[#2d6a4f] hover:shadow-md transition-all group/unit cursor-pointer relative overflow-hidden"
+                                                                    >
                                                                         <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover/unit:opacity-100 transition-opacity"><Icono nombre="ChevronRight" size={16} className="text-[#c89e3a]" /></div>
-                                                                        <p className="text-[10px] font-black text-slate-700 uppercase leading-tight mb-1 group-hover/unit:text-[#2d6a4f] pr-6">{u.nombre}</p>
+                                                                        <p className="text-[10px] font-black text-slate-700 uppercase leading-tight mb-1 group-hover/unit:text-[#2d6a4f] pr-6">{u.nombre || 'N/A'}</p>
                                                                         <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
-                                                                            <div className="flex items-center gap-1"><Icono nombre="Hash" size={10} className="text-[#c89e3a]" />CLUES: {u.clues}</div>
-                                                                            <div className="flex items-center gap-1"><Icono nombre="ShieldCheck" size={10} className="text-[#c89e3a]" />{u.inst}</div>
+                                                                            <div className="flex items-center gap-1"><Icono nombre="Hash" size={10} className="text-[#c89e3a]" />CLUES: {u.clues || 'S/C'}</div>
+                                                                            <div className="flex items-center gap-1"><Icono nombre="ShieldCheck" size={10} className="text-[#c89e3a]" />{u.inst || 'S/I'}</div>
                                                                         </div>
                                                                     </div>
                                                                 ))
                                                             ) : (
-                                                                selectedRecord.localities.sort((a,b) => a.nombre.localeCompare(b.nombre)).map((loc, i) => (
+                                                                [...(selectedRecord.localidades || [])].sort((a,b) => (a.nombre || "").localeCompare(b.nombre || "")).map((loc, i) => (
                                                                     <div key={i} className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex justify-between items-center group/loc">
                                                                         <div>
-                                                                            <p className="text-[10px] font-black text-slate-700 uppercase leading-tight mb-1">{loc.nombre}</p>
-                                                                            <div className="flex items-center gap-1.5"><Icono nombre="Users" size={10} className="text-[#c89e3a]" /><p className="text-[9px] font-bold text-slate-400">Población: {loc.pobTotal.toLocaleString()}</p></div>
+                                                                            <p className="text-[10px] font-black text-slate-700 uppercase leading-tight mb-1">{loc.nombre || 'N/A'}</p>
+                                                                            <div className="flex items-center gap-1.5"><Icono nombre="Users" size={10} className="text-[#c89e3a]" /><p className="text-[9px] font-bold text-slate-400">Población: {Number(loc.pobTotal || 0).toLocaleString()}</p></div>
                                                                         </div>
                                                                         <div className="text-right">
                                                                             <p className="text-[9px] font-black text-slate-300 uppercase mb-0.5">Clave GEO</p>
-                                                                            <p className="text-[10px] font-mono font-bold text-slate-500">{loc.cveGeo}</p>
+                                                                            <p className="text-[10px] font-mono font-bold text-slate-500">{loc.cveGeo || 'S/C'}</p>
                                                                         </div>
                                                                     </div>
                                                                 ))
@@ -625,7 +635,7 @@
                                                     <div className="space-y-6">
                                                         <div className="bg-[#2d6a4f] p-6 rounded-[1.5rem] text-white shadow-xl">
                                                             <p className="text-[9px] font-black uppercase tracking-widest opacity-60 mb-1">Habitantes Nominales</p>
-                                                            <p className="text-4xl font-black tracking-tighter">{Number(selectedRecord.pob_total).toLocaleString()}</p>
+                                                            <p className="text-4xl font-black tracking-tighter">{Number(selectedRecord.pob_total || 0).toLocaleString()}</p>
                                                         </div>
                                                         <div className="grid grid-cols-2 gap-4">
                                                             <MetricBox label="Sin derechohabiencia" value={selectedRecord.pob_s_derecho} color="text-slate-500" />
@@ -654,7 +664,6 @@
                             </div>
                         </div>
 
-                        {/* SECCIÓN ACTUALIZADA: RESPONSABLES (Fuera de la cuadrícula lateral) */}
                         <section className="bg-white p-10 rounded-[3rem] shadow-xl border border-slate-100 animate-in fade-in duration-1000 mt-8">
                             <div className="flex items-center gap-3 mb-10 px-4">
                                 <div className="p-3 bg-[#d8f3dc] text-[#2d6a4f] rounded-2xl shadow-sm">
