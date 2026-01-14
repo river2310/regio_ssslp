@@ -270,14 +270,15 @@
                                     cve_mun: item.CVE_MUN_ATIENDE,
                                     lat: parseFloat(item.latitud),
                                     lng: parseFloat(item.longitud),
-                                    pob_total: 0, pob_s_derecho: 0, pob_imss: 0, pob_issste: 0, pob_bien: 0
+                                    pob_total: 0, pob_s_derecho: 0, pob_imss: 0, pob_issste: 0, pob_imss_bien: 0, pob_bien: 0
                                 };
                             }
                             groupedLoc[key].pob_total += Number(item.pob_total) || 0;
                             groupedLoc[key].pob_s_derecho += Number(item.pob_s_derecho) || 0;
                             groupedLoc[key].pob_imss += Number(item.pob_imss) || 0;
                             groupedLoc[key].pob_issste += Number(item.pob_issste) || 0;
-                            groupedLoc[key].pob_bien += (Number(item.pob_bien) || 0) + (Number(item.pob_imss_bien) || 0);
+                            groupedLoc[key].pob_imss_bien += Number(item.pob_imss_bien) || 0;
+                            groupedLoc[key].pob_bien += Number(item.pob_bien) || 0;
                         }
                     });
                     return Object.values(groupedLoc).slice(0, 50);
@@ -297,7 +298,7 @@
                                     jurName: item.JUR_NOMBRE || item.NOMBRE,
                                     cve_mun: item.CVE_MUN_ATIENDE,
                                     unidades: new Set(),
-                                    pob_total: 0, pob_s_derecho: 0, pob_imss: 0, pob_issste: 0, pob_bien: 0
+                                    pob_total: 0, pob_s_derecho: 0, pob_imss: 0, pob_issste: 0, pob_imss_bien: 0, pob_bien: 0
                                 };
                             }
                             if (item.UNIDAD) {
@@ -308,7 +309,8 @@
                             groupedMun[key].pob_s_derecho += Number(item.pob_s_derecho) || 0;
                             groupedMun[key].pob_imss += Number(item.pob_imss) || 0;
                             groupedMun[key].pob_issste += Number(item.pob_issste) || 0;
-                            groupedMun[key].pob_bien += (Number(item.pob_bien) || 0) + (Number(item.pob_imss_bien) || 0);
+                            groupedMun[key].pob_imss_bien += Number(item.pob_imss_bien) || 0;
+                            groupedMun[key].pob_bien += Number(item.pob_bien) || 0;
                         }
                     });
                     return Object.values(groupedMun).slice(0, 50);
@@ -531,6 +533,7 @@
                                                             <MetricBox label="Sin Derecho" value={selectedRecord.pob_s_derecho} color="text-slate-500" />
                                                             <MetricBox label="IMSS" value={selectedRecord.pob_imss} color="text-[#2d6a4f]" />
                                                             <MetricBox label="ISSSTE" value={selectedRecord.pob_issste} color="text-[#1a3a5f]" />
+                                                            <MetricBox label="IMSS BIENESTAR" value={selectedRecord.pob_imss_bien} color="text-[#065f46]" />
                                                             <MetricBox label="Otra derechohabiencia" value={selectedRecord.pob_bien} color="text-[#c89e3a]" />
                                                         </div>
                                                     </div>
