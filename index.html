@@ -18,21 +18,23 @@ import {
   Stethoscope,
   LayoutDashboard,
   Hash,
-  Map as MapIconLucide,
   Fingerprint
 } from 'lucide-react';
 
+/**
+ * CONFIGURACIÓN DE IDENTIDAD Y DATOS
+ */
 const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQTyXeda4MphOJX65C0n5DYQamD0JqUtLIJJio7qDV_yZk6t5PQV04LSrRHoZv1udCCNPsufqw2vIZi/pub?gid=0&single=true&output=csv';
 const LOGO_URL = 'https://d3dac9gdq8t83x.cloudfront.net/media/static/images/hor-verde.png';
 const FAVICON_URL = 'https://d3dac9gdq8t83x.cloudfront.net/media/static/images/favicons/logo-verde.png';
 
-// Paleta de colores basada en el logo verde institucional de Visitando Corazones
+// Paleta institucional "Visitando Corazones"
 const COLORS = {
-  primary: '#1b4332', 
-  secondary: '#2d6a4f', 
-  accent: '#c89e3a', 
-  light: '#f1f8e9', 
-  border: '#e8f5e9'
+  primary: '#1b4332',    // Verde Bosque
+  secondary: '#2d6a4f',  // Verde Medio
+  accent: '#c89e3a',     // Dorado Prestigio
+  background: '#fcfdfc', // Blanco Hueso
+  border: '#e8f5e9'      // Verde Tenue
 };
 
 const App = () => {
@@ -44,7 +46,7 @@ const App = () => {
   const [selectedRecord, setSelectedRecord] = useState(null);
   const searchContainerRef = useRef(null);
 
-  // Configuración de Identidad Visual (Favicon y Título de Pestaña)
+  // 1. Efecto para Identidad Visual del Navegador
   useEffect(() => {
     const link = document.querySelector("link[rel~='icon']") || document.createElement('link');
     link.type = 'image/png';
@@ -54,10 +56,12 @@ const App = () => {
     document.title = "Regionalización | Visitando Corazones";
   }, []);
 
+  // 2. Carga inicial de datos
   useEffect(() => {
     fetchData();
   }, []);
 
+  // 3. Reset de estados al cambiar pestaña de búsqueda
   useEffect(() => {
     setSelectedRecord(null);
     setSearchTerm('');
@@ -81,6 +85,8 @@ const App = () => {
     try {
       const lines = text.split(/\r?\n/);
       if (lines.length < 2) return;
+      
+      // Limpieza de cabeceras (elimina caracteres invisibles de Excel)
       const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, '').replace(/^\uFEFF/, ''));
       const result = [];
 
@@ -102,21 +108,26 @@ const App = () => {
     }
   };
 
-  const normalize = (text) => 
+  /**
+   * LÓGICA DE BÚSQUEDA Y NORMALIZACIÓN
+   * Elimina acentos y caracteres especiales para búsquedas exactas
+   */
+  const normalizeText = (text) => 
     text ? text.toString().toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9 ]/g, "") : "";
 
   const processedResults = useMemo(() => {
     if (data.length === 0) return [];
-    const lowerSearch = normalize(searchTerm);
+    const lowerSearch = normalizeText(searchTerm);
 
     if (filterType === 'LOCALIDAD') {
       const groupedLoc = {};
       data.forEach(item => {
         const locName = item['NOMBRE LOC'] || item['NOMBRE_LOC'] || '';
-        if (!lowerSearch || normalize(locName).includes(lowerSearch)) {
+        if (!lowerSearch || normalizeText(locName).includes(lowerSearch)) {
           const munName = item['NOMBRE MUN'] || item['NOMBRE_MUN'] || item['NOMBRE MUNICIPIO'] || 'N/A';
           const unit = item.UNIDAD || 'N/A';
-          const key = normalize(`${locName}-${munName}-${unit}`);
+          const key = normalizeText(`${locName}-${munName}-${unit}`);
+          
           if (!groupedLoc[key]) {
             groupedLoc[key] = {
               type: 'INDIVIDUAL_LOC',
@@ -145,8 +156,8 @@ const App = () => {
       const groupedMun = {};
       data.forEach(item => {
         const munName = item['NOMBRE MUN'] || item['NOMBRE_MUN'] || item['NOMBRE MUNICIPIO'] || '';
-        if (!lowerSearch || normalize(munName).includes(lowerSearch)) {
-          const key = normalize(munName);
+        if (!lowerSearch || normalizeText(munName).includes(lowerSearch)) {
+          const key = normalizeText(munName);
           if (!groupedMun[key]) {
             groupedMun[key] = {
               type: 'GROUPED_MUN',
@@ -154,7 +165,7 @@ const App = () => {
               NOMBRE_MUNICIPIO: munName,
               jur: item.JUR,
               jurName: item.JUR_NOMBRE || item.NOMBRE,
-              cve_mun: item.CVE_MUN_ATIENDE, // Nueva columna solicitada
+              cve_mun: item.CVE_MUN_ATIENDE,
               unidades: new Set(), 
               pob_total: 0, pob_s_derecho: 0, pob_imss: 0, pob_issste: 0, pob_bien: 0
             };
@@ -186,6 +197,7 @@ const App = () => {
 
   return (
     <div className="min-h-screen bg-[#fcfdfc] text-[#1b1c1b] font-sans">
+      {/* HEADER INSTITUCIONAL */}
       <header className="bg-[#1b4332] text-white shadow-xl border-b-4 border-[#c89e3a] sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 py-3 flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-6">
@@ -216,7 +228,7 @@ const App = () => {
             <div className="h-8 w-[1px] bg-white/10 mx-1"></div>
             <div className="bg-white/10 px-4 py-2 rounded-xl flex items-center gap-3 border border-white/5 shadow-sm">
                 <LayoutDashboard size={16} className="text-[#c89e3a]" />
-                <span className="text-[10px] font-black uppercase tracking-widest leading-none">ver. 21.10.2025</span>
+                <span className="text-[10px] font-black uppercase tracking-widest leading-none text-white/80">ver. 21.10.2025</span>
             </div>
           </div>
         </div>
@@ -225,6 +237,7 @@ const App = () => {
       <main className="max-w-7xl mx-auto p-4 md:p-8 space-y-8">
         {!loading && !error && (
           <>
+            {/* INDICADORES DE ALTO NIVEL */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <IndicatorCard 
                 label="Municipios en Red" 
@@ -240,6 +253,7 @@ const App = () => {
               />
             </div>
 
+            {/* BARRA DE BÚSQUEDA Y FILTROS */}
             <div className="bg-white p-5 rounded-[2.5rem] shadow-xl border border-slate-100 flex flex-col md:flex-row gap-5 items-center">
               <div className="relative flex-1 w-full">
                 <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300" size={22} />
@@ -275,6 +289,7 @@ const App = () => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+              {/* COLUMNA DE RESULTADOS */}
               <div className="lg:col-span-7 space-y-5">
                 <div className="flex items-center gap-3 px-3 text-[#1b4332]">
                   <List size={18} />
@@ -301,7 +316,6 @@ const App = () => {
                             <span className="text-[9px] font-black text-[#c89e3a] uppercase tracking-widest bg-slate-50 px-2 py-0.5 rounded-md border border-slate-100">
                               JUR {item.jur}: {item.jurName}
                             </span>
-                            {/* Visualización de Claves Geográficas/Municipales en la lista */}
                             {filterType === 'LOCALIDAD' && item.cve_geo && (
                               <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">
                                 GEO: {item.cve_geo}
@@ -335,6 +349,7 @@ const App = () => {
                 </div>
               </div>
 
+              {/* PANEL DE ANÁLISIS (FICHA OPERATIVA) */}
               <div className="lg:col-span-5">
                 <div className="sticky top-[100px]">
                   {selectedRecord ? (
@@ -354,14 +369,13 @@ const App = () => {
                         <div className="space-y-4 pt-6 border-t border-white/10">
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             <div className="flex items-start gap-3 bg-white/5 p-3 rounded-xl border border-white/5">
-                              <MapIconLucide size={16} className="text-amber-300 mt-0.5" />
+                              <MapIcon size={16} className="text-amber-300 mt-0.5" />
                               <div>
                                 <p className="text-[8px] font-black text-amber-200 uppercase tracking-widest">Jurisdicción Sanitaria</p>
                                 <p className="text-[10px] font-bold uppercase">{selectedRecord.jur} - {selectedRecord.jurName}</p>
                               </div>
                             </div>
                             
-                            {/* Mostrar Clave Geo (Localidad) o Clave Mun (Municipio) */}
                             {(selectedRecord.cve_geo || selectedRecord.cve_mun) && (
                               <div className="flex items-start gap-3 bg-white/5 p-3 rounded-xl border border-white/5">
                                 <Fingerprint size={16} className="text-emerald-300 mt-0.5" />
@@ -386,20 +400,6 @@ const App = () => {
                               </div>
                             </div>
                           )}
-                          <div className="grid grid-cols-2 gap-3">
-                            {selectedRecord.CLUES && (
-                              <div className="bg-black/10 p-3 rounded-xl">
-                                <p className="text-[8px] font-black text-amber-200 uppercase tracking-widest">CLUES</p>
-                                <p className="text-[10px] font-mono font-bold tracking-widest">{selectedRecord.CLUES}</p>
-                              </div>
-                            )}
-                            {selectedRecord.CVE_CORTA_INST && (
-                              <div className="bg-black/10 p-3 rounded-xl">
-                                <p className="text-[8px] font-black text-amber-200 uppercase tracking-widest">Inst.</p>
-                                <p className="text-[10px] font-bold uppercase">{selectedRecord.CVE_CORTA_INST}</p>
-                              </div>
-                            )}
-                          </div>
                         </div>
                       </div>
                       
@@ -482,6 +482,7 @@ const App = () => {
         )}
       </main>
       
+      {/* ESTILOS GLOBALES */}
       <style>{`
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
@@ -498,6 +499,9 @@ const App = () => {
   );
 };
 
+/**
+ * COMPONENTES DE APOYO
+ */
 const IndicatorCard = ({ label, value, icon, color }) => (
   <div className="bg-white p-8 rounded-[2.5rem] shadow-lg border border-slate-50 flex items-center gap-6 transition-all hover:shadow-2xl hover:-translate-y-1 border-b-[6px] border-transparent hover:border-[#c89e3a] group">
     <div className={`${color} p-5 rounded-2xl text-white shadow-lg transform group-hover:rotate-6 transition-transform duration-500`}>
