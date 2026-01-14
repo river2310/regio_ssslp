@@ -27,13 +27,15 @@
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #1b4332; }
         
         @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slide-up { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         @keyframes slide-right { from { transform: translateX(30px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         
-        .animate-in { animation-duration: 0.6s; animation-fill-mode: both; }
+        .animate-in { animation-duration: 0.4s; animation-fill-mode: both; }
         .fade-in { animation-name: fade-in; }
+        .slide-up { animation-name: slide-up; }
         .slide-in-from-right { animation-name: slide-right; }
         
-        body { background-color: #fcfdfc; margin: 0; padding: 0; }
+        body { background-color: #fcfdfc; margin: 0; padding: 0; overflow-x: hidden; }
 
         #map-display {
             height: 280px;
@@ -50,6 +52,11 @@
         .leaflet-popup-content {
             margin: 12px;
             line-height: 1.4;
+        }
+
+        .modal-overlay {
+            background-color: rgba(27, 67, 50, 0.4);
+            backdrop-filter: blur(4px);
         }
     </style>
 </head>
@@ -73,12 +80,9 @@
 
         const Icono = ({ nombre, size = 24, className = "" }) => {
             if (!window.lucide || !window.lucide.icons) return null;
-
             const normalizedName = nombre.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
             const iconData = window.lucide.icons[nombre] || window.lucide.icons[normalizedName];
-
             if (!iconData) return <div style={{ width: size, height: size }} className="bg-slate-100 rounded-sm" />;
-
             return (
                 <svg
                     width={size}
@@ -100,54 +104,73 @@
             );
         };
 
+        const ModalLocalidades = ({ isOpen, onClose, unidadNombre, localidades, clues }) => {
+            if (!isOpen) return null;
+            return (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 modal-overlay animate-in fade-in duration-300">
+                    <div className="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden animate-in slide-up duration-500 max-h-[85vh] flex flex-col">
+                        <div className="bg-[#1b4332] p-8 text-white flex justify-between items-start">
+                            <div>
+                                <div className="flex items-center gap-2 mb-2">
+                                    <Icono nombre="Hospital" size={16} className="text-[#c89e3a]" />
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-[#d8f3dc]">Cobertura de Unidad</span>
+                                </div>
+                                <h3 className="text-xl font-black uppercase leading-tight">{unidadNombre}</h3>
+                                <p className="text-[10px] font-mono text-white/60 mt-1 uppercase tracking-widest">CLUES: {clues}</p>
+                            </div>
+                            <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+                                <Icono nombre="X" size={24} />
+                            </button>
+                        </div>
+                        
+                        <div className="p-8 overflow-y-auto custom-scrollbar flex-1 bg-slate-50">
+                            <div className="flex items-center gap-2 mb-6">
+                                <Icono nombre="MapPin" size={18} className="text-[#c89e3a]" />
+                                <span className="text-[11px] font-black uppercase tracking-[0.2em] text-[#1b4332]">Localidades vinculadas ({localidades.length})</span>
+                            </div>
+                            <div className="grid gap-3">
+                                {localidades.sort((a,b) => a.nombre.localeCompare(b.nombre)).map((loc, idx) => (
+                                    <div key={idx} className="bg-white p-4 rounded-2xl border border-slate-200 flex justify-between items-center group hover:border-[#1b4332] transition-all shadow-sm">
+                                        <div>
+                                            <p className="text-xs font-black text-slate-700 uppercase group-hover:text-[#1b4332] transition-colors">{loc.nombre}</p>
+                                            <div className="flex items-center gap-1.5 mt-1">
+                                                <Icono nombre="Users" size={10} className="text-[#c89e3a]" />
+                                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Población: {loc.pobTotal.toLocaleString()}</p>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest mb-0.5">Clave GEO</p>
+                                            <p className="text-[10px] font-mono font-bold text-slate-500">{loc.cveGeo}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                        
+                        <div className="p-6 border-t border-slate-100 text-center bg-white">
+                            <button onClick={onClose} className="px-8 py-3 bg-[#1b4332] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#2d6a4f] transition-all shadow-lg active:scale-95">
+                                Cerrar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
         const LocalidadMap = ({ lat, lng, title, cveGeo, munName, cveMun }) => {
             const leafletMap = useRef(null);
-
             useEffect(() => {
                 if (!lat || !lng) return;
-
                 if (!leafletMap.current) {
-                    leafletMap.current = L.map('map-display', {
-                        center: [lat, lng],
-                        zoom: 14,
-                        scrollWheelZoom: false
-                    });
-
-                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                        attribution: '&copy; OpenStreetMap'
-                    }).addTo(leafletMap.current);
+                    leafletMap.current = L.map('map-display', { center: [lat, lng], zoom: 14, scrollWheelZoom: false });
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap' }).addTo(leafletMap.current);
                 } else {
                     leafletMap.current.setView([lat, lng], 14);
                 }
-
-                leafletMap.current.eachLayer((layer) => {
-                    if (layer instanceof L.Marker) {
-                        leafletMap.current.removeLayer(layer);
-                    }
-                });
-
-                const popupContent = `
-                    <div style="font-family: sans-serif;">
-                        <div style="color: #1b4332; font-weight: 900; font-size: 13px; text-transform: uppercase; margin-bottom: 4px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px;">
-                            ${title}
-                        </div>
-                        <div style="margin-bottom: 6px;">
-                            <div style="color: #64748b; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;">Municipio</div>
-                            <div style="color: #1e293b; font-size: 11px; font-weight: 700;">${munName} <span style="color: #c89e3a;">(${cveMun || 'S/C'})</span></div>
-                        </div>
-                        <div>
-                            <div style="color: #64748b; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;">Clave Geoestadística</div>
-                            <div style="color: #2d6a4f; font-family: monospace; font-size: 11px; font-weight: 700;">${cveGeo || 'N/A'}</div>
-                        </div>
-                    </div>
-                `;
-
-                L.marker([lat, lng]).addTo(leafletMap.current)
-                    .bindPopup(popupContent)
-                    .openPopup();
-
+                leafletMap.current.eachLayer((layer) => { if (layer instanceof L.Marker) leafletMap.current.removeLayer(layer); });
+                const popupContent = `<div style="font-family: sans-serif;"><div style="color: #1b4332; font-weight: 900; font-size: 13px; text-transform: uppercase; margin-bottom: 4px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px;">${title}</div><div style="margin-bottom: 6px;"><div style="color: #64748b; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;">Municipio</div><div style="color: #1e293b; font-size: 11px; font-weight: 700;">${munName} <span style="color: #c89e3a;">(${cveMun || 'S/C'})</span></div></div><div><div style="color: #64748b; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;">Clave Geoestadística</div><div style="color: #2d6a4f; font-family: monospace; font-size: 11px; font-weight: 700;">${cveGeo || 'N/A'}</div></div></div>`;
+                L.marker([lat, lng]).addTo(leafletMap.current).bindPopup(popupContent).openPopup();
             }, [lat, lng, title, cveGeo, munName, cveMun]);
-
             return (
                 <div className="space-y-3 pt-4 border-t border-slate-100 animate-in fade-in duration-700">
                     <div className="flex items-center gap-2 text-[#1b4332]">
@@ -187,6 +210,8 @@
             const [searchTerm, setSearchTerm] = useState('');
             const [filterType, setFilterType] = useState('LOCALIDAD');
             const [selectedRecord, setSelectedRecord] = useState(null);
+            
+            const [modalState, setModalState] = useState({ isOpen: false, unit: null, localities: [], clues: '' });
 
             useEffect(() => {
                 const link = document.querySelector("link[rel~='icon']") || document.createElement('link');
@@ -262,7 +287,6 @@
                                     municipio_display: munName,
                                     UNIDAD: unit,
                                     CLUES: item.CLUES,
-                                    CVE_CORTA_INST: item.CVE_CORTA_INST,
                                     nomInst: item.nom_inst || item.NOM_INST || 'N/A',
                                     jur: item.JUR,
                                     jurName: item.JUR_NOMBRE || item.NOMBRE,
@@ -297,13 +321,25 @@
                                     jur: item.JUR,
                                     jurName: item.JUR_NOMBRE || item.NOMBRE,
                                     cve_mun: item.CVE_MUN_ATIENDE,
-                                    unidades: new Set(),
+                                    unidadesData: {},
                                     pob_total: 0, pob_s_derecho: 0, pob_imss: 0, pob_issste: 0, pob_imss_bien: 0, pob_bien: 0
                                 };
                             }
                             if (item.UNIDAD) {
-                                const label = `${item.UNIDAD} [${item.CLUES || 'S/C'}] ${item.nom_inst || item.NOM_INST || ''}`;
-                                groupedMun[key].unidades.add(label.trim());
+                                const clues = item.CLUES || 'S/C';
+                                if (!groupedMun[key].unidadesData[clues]) {
+                                    groupedMun[key].unidadesData[clues] = {
+                                        nombre: item.UNIDAD,
+                                        inst: item.nom_inst || item.NOM_INST || 'S/I',
+                                        clues: clues,
+                                        localidades: []
+                                    };
+                                }
+                                groupedMun[key].unidadesData[clues].localidades.push({
+                                    nombre: item['NOMBRE LOC'] || item['NOMBRE_LOC'],
+                                    cveGeo: item.cve_geo,
+                                    pobTotal: Number(item.pob_total) || 0
+                                });
                             }
                             groupedMun[key].pob_total += Number(item.pob_total) || 0;
                             groupedMun[key].pob_s_derecho += Number(item.pob_s_derecho) || 0;
@@ -337,11 +373,19 @@
 
             return (
                 <div className="min-h-screen bg-[#fcfdfc] text-[#1b1c1b] font-sans selection:bg-emerald-100 selection:text-emerald-900">
+                    <ModalLocalidades 
+                        isOpen={modalState.isOpen} 
+                        onClose={() => setModalState({ ...modalState, isOpen: false })}
+                        unidadNombre={modalState.unit}
+                        localidades={modalState.localities}
+                        clues={modalState.clues}
+                    />
+
                     <header className="bg-[#1b4332] text-white shadow-xl border-b-4 border-[#c89e3a] sticky top-0 z-50">
                         <div className="max-w-7xl mx-auto px-6 py-3 flex flex-col md:flex-row justify-between items-center gap-4">
                             <div className="flex items-center gap-6">
                                 <div className="bg-white p-2 rounded-xl shadow-inner">
-                                    <img src={LOGO_URL} alt="Visitando Corazones" className="h-12 w-auto object-contain" />
+                                    <img src={LOGO_URL} alt="Logo" className="h-12 w-auto object-contain" />
                                 </div>
                                 <div>
                                     <h1 className="text-xl md:text-2xl font-black tracking-tight uppercase leading-none text-balance">Regionalización Operativa</h1>
@@ -471,7 +515,7 @@
                                                         )}
                                                     </div>
                                                     
-                                                    {selectedRecord.UNIDAD && (
+                                                    {selectedRecord.type === 'INDIVIDUAL_LOC' && selectedRecord.UNIDAD && (
                                                         <div className="flex items-start gap-3 bg-white/5 p-3 rounded-xl border border-white/5 col-span-1 md:col-span-2">
                                                             <Icono nombre="Hospital" size={16} className="text-[#c89e3a] mt-0.5" />
                                                             <div className="flex-1">
@@ -493,29 +537,31 @@
                                                 {selectedRecord.type === 'GROUPED_MUN' && (
                                                     <section>
                                                         <h5 className="text-[10px] font-black text-[#1b4332] uppercase tracking-[0.2em] mb-5 flex items-center gap-3">
-                                                            <Icono nombre="Stethoscope" size={16} className="text-[#c89e3a]" /> Infraestructura ({selectedRecord.unidades.size})
+                                                            <Icono nombre="Stethoscope" size={16} className="text-[#c89e3a]" /> Infraestructura ({Object.keys(selectedRecord.unidadesData).length})
                                                         </h5>
                                                         <div className="grid gap-3">
-                                                            {Array.from(selectedRecord.unidades).map((u, i) => {
-                                                                const parts = u.match(/(.*) \[(.*)\] (.*)/) || u.match(/(.*) \[(.*)\]/);
-                                                                return parts ? (
-                                                                    <div key={i} className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm hover:border-[#1b4332] transition-colors group/unit">
-                                                                        <p className="text-[10px] font-black text-slate-700 uppercase leading-tight mb-1">{parts[1]}</p>
-                                                                        <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
-                                                                            <div className="flex items-center gap-1">
-                                                                                <Icono nombre="Hash" size={10} className="text-[#c89e3a]" />
-                                                                                CLUES: {parts[2]}
-                                                                            </div>
-                                                                            {parts[3] && (
-                                                                                <div className="flex items-center gap-1">
-                                                                                    <Icono nombre="ShieldCheck" size={10} className="text-[#c89e3a]" />
-                                                                                    {parts[3]}
-                                                                                </div>
-                                                                            )}
+                                                            {Object.values(selectedRecord.unidadesData).sort((a,b) => a.nombre.localeCompare(b.nombre)).map((u, i) => (
+                                                                <div 
+                                                                    key={i} 
+                                                                    onClick={() => setModalState({ isOpen: true, unit: u.nombre, localities: u.localidades, clues: u.clues })}
+                                                                    className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm hover:border-[#1b4332] hover:shadow-md transition-all group/unit cursor-pointer relative overflow-hidden"
+                                                                >
+                                                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover/unit:opacity-100 transition-opacity">
+                                                                        <Icono nombre="ChevronRight" size={16} className="text-[#c89e3a]" />
+                                                                    </div>
+                                                                    <p className="text-[10px] font-black text-slate-700 uppercase leading-tight mb-1 group-hover/unit:text-[#1b4332] pr-6">{u.nombre}</p>
+                                                                    <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
+                                                                        <div className="flex items-center gap-1">
+                                                                            <Icono nombre="Hash" size={10} className="text-[#c89e3a]" />
+                                                                            CLUES: {u.clues}
+                                                                        </div>
+                                                                        <div className="flex items-center gap-1">
+                                                                            <Icono nombre="ShieldCheck" size={10} className="text-[#c89e3a]" />
+                                                                            {u.inst}
                                                                         </div>
                                                                     </div>
-                                                                ) : <div key={i} className="text-xs p-2 bg-slate-50 rounded-lg">{u}</div>;
-                                                            })}
+                                                                </div>
+                                                            ))}
                                                         </div>
                                                     </section>
                                                 )}
