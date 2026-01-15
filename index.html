@@ -130,6 +130,36 @@
             </div>
         );
 
+        const LocalidadRow = ({ loc }) => (
+            <div className="bg-white p-4 rounded-2xl border border-slate-200 flex justify-between items-center group hover:border-[#2d6a4f] transition-all shadow-sm">
+                <div className="flex-1">
+                    <p className="text-xs font-black text-slate-700 uppercase group-hover:text-[#2d6a4f] transition-colors">{loc.nombre || 'N/A'}</p>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5">
+                        <div className="flex items-center gap-1.5">
+                            <Icono nombre="Users" size={10} className="text-[#c89e3a]" />
+                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Pob: {Number(loc.pobTotal || 0).toLocaleString()}</p>
+                        </div>
+                        {loc.ageb && loc.ageb !== "0" && (
+                            <div className="flex items-center gap-1 px-1.5 py-0.5 bg-slate-50 border border-slate-100 rounded text-slate-500">
+                                <Icono nombre="Fingerprint" size={8} />
+                                <p className="text-[8px] font-black tracking-widest">AGEB: {loc.ageb}</p>
+                            </div>
+                        )}
+                        {loc.manzana && loc.manzana !== "0" && (
+                            <div className="flex items-center gap-1 px-1.5 py-0.5 bg-slate-50 border border-slate-100 rounded text-slate-500">
+                                <Icono nombre="Hash" size={8} />
+                                <p className="text-[8px] font-black tracking-widest uppercase">MANZANA: {loc.manzana}</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+                <div className="text-right ml-4">
+                    <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest mb-0.5">Clave GEO</p>
+                    <p className="text-[10px] font-mono font-bold text-slate-500">{loc.cveGeo || 'S/C'}</p>
+                </div>
+            </div>
+        );
+
         const ModalLocalidades = ({ isOpen, onClose, unidadNombre, localidades = [], clues }) => {
             if (!isOpen) return null;
 
@@ -162,19 +192,7 @@
                             </div>
                             <div className="grid gap-3">
                                 {sortedLocs.map((loc, idx) => (
-                                    <div key={idx} className="bg-white p-4 rounded-2xl border border-slate-200 flex justify-between items-center group hover:border-[#2d6a4f] transition-all shadow-sm">
-                                        <div>
-                                            <p className="text-xs font-black text-slate-700 uppercase group-hover:text-[#2d6a4f] transition-colors">{loc.nombre || 'N/A'}</p>
-                                            <div className="flex items-center gap-1.5 mt-1">
-                                                <Icono nombre="Users" size={10} className="text-[#c89e3a]" />
-                                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Población: {Number(loc.pobTotal || 0).toLocaleString()}</p>
-                                            </div>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest mb-0.5">Clave GEO</p>
-                                            <p className="text-[10px] font-mono font-bold text-slate-500">{loc.cveGeo || 'S/C'}</p>
-                                        </div>
-                                    </div>
+                                    <LocalidadRow key={idx} loc={loc} />
                                 ))}
                             </div>
                         </div>
@@ -311,7 +329,12 @@
                         if (!lowerSearch || normalizeText(locName).includes(lowerSearch)) {
                             const munName = item['NOMBRE MUN'] || item['NOMBRE_MUN'] || 'N/A';
                             const unit = item.UNIDAD || 'N/A';
-                            const key = normalizeText(`${locName}-${munName}-${unit}`);
+                            const ageb = item.cve_geo_ageb || '0';
+                            const manzana = item.manzana || '0';
+                            
+                            // Agregamos AGEB y MANZANA a la llave para diferenciar bloques específicos si el usuario lo requiere
+                            const key = normalizeText(`${locName}-${munName}-${unit}-${ageb}-${manzana}`);
+                            
                             if (!groupedLoc[key]) {
                                 groupedLoc[key] = {
                                     type: 'INDIVIDUAL_LOC',
@@ -325,6 +348,8 @@
                                     jurName: item.JUR_NOMBRE || item.NOMBRE,
                                     cve_geo: item.cve_geo,
                                     cve_mun: item.CVE_MUN_ATIENDE,
+                                    ageb: ageb,
+                                    manzana: manzana,
                                     lat: parseFloat(item.latitud),
                                     lng: parseFloat(item.longitud),
                                     pob_total: 0, pob_s_derecho: 0, pob_imss: 0, pob_issste: 0, pob_imss_bien: 0, pob_bien: 0
@@ -371,7 +396,9 @@
                                 groupedMun[key].unidadesData[clues].localidades.push({
                                     nombre: item['NOMBRE LOC'] || item['NOMBRE_LOC'],
                                     cveGeo: item.cve_geo,
-                                    pobTotal: Number(item.pob_total) || 0
+                                    pobTotal: Number(item.pob_total) || 0,
+                                    ageb: item.cve_geo_ageb,
+                                    manzana: item.manzana
                                 });
                             }
                             groupedMun[key].pob_total += Number(item.pob_total) || 0;
@@ -406,7 +433,9 @@
                             groupedUnits[clues].localidades.push({
                                 nombre: item['NOMBRE LOC'] || item['NOMBRE_LOC'],
                                 cveGeo: item.cve_geo,
-                                pobTotal: Number(item.pob_total) || 0
+                                pobTotal: Number(item.pob_total) || 0,
+                                ageb: item.cve_geo_ageb,
+                                manzana: item.manzana
                             });
                             groupedUnits[clues].pob_total += Number(item.pob_total) || 0;
                             groupedUnits[clues].pob_s_derecho += Number(item.pob_s_derecho) || 0;
@@ -472,7 +501,7 @@
                                 </button>
                                 <div className="h-8 w-[1px] bg-white/10 mx-1"></div>
                                 <div className="bg-white/10 px-4 py-2 rounded-xl flex items-center gap-3 border border-white/5 shadow-sm">
-                                    <span className="text-[10px] font-black uppercase tracking-widest leading-none text-white/80">ver. 21.10.2025</span>
+                                    <span className="text-[10px] font-black uppercase tracking-widest leading-none text-white/80">regio ver. 21.10.2025</span>
                                 </div>
                             </div>
                         </div>
@@ -527,7 +556,20 @@
                                                             {item.clues && <span className="text-[9px] font-black text-amber-600 uppercase tracking-widest bg-amber-50 px-2 py-0.5 rounded-md border border-amber-100">CLUES: {item.clues}</span>}
                                                         </div>
                                                         <h4 className="font-black text-[#2d3436] text-xl leading-tight uppercase group-hover:text-[#2d6a4f] transition-colors">{item.title}</h4>
-                                                        <p className="text-xs text-slate-400 font-bold uppercase tracking-tight flex items-center gap-2 mt-1">
+                                                        
+                                                        {/* Información adicional de AGEB y MANZANA en el listado */}
+                                                        {item.type === 'INDIVIDUAL_LOC' && (
+                                                            <div className="flex flex-wrap gap-2 mt-2">
+                                                                {item.ageb && item.ageb !== "0" && (
+                                                                    <span className="text-[8px] font-black bg-slate-100 text-slate-500 px-2 py-0.5 rounded border border-slate-200 uppercase tracking-widest">AGEB: {item.ageb}</span>
+                                                                )}
+                                                                {item.manzana && item.manzana !== "0" && (
+                                                                    <span className="text-[8px] font-black bg-slate-100 text-slate-500 px-2 py-0.5 rounded border border-slate-200 uppercase tracking-widest">MANZANA: {item.manzana}</span>
+                                                                )}
+                                                            </div>
+                                                        )}
+
+                                                        <p className="text-xs text-slate-400 font-bold uppercase tracking-tight flex items-center gap-2 mt-2">
                                                             <Icono nombre={item.type === 'GROUPED_UNIT_INDIVIDUAL' ? "ShieldCheck" : "MapPin"} size={14} className="text-[#c89e3a]" />
                                                             {item.type === 'INDIVIDUAL_LOC' ? (
                                                                 <span className="truncate">
@@ -587,32 +629,25 @@
                                                                 </div>
                                                             </div>
                                                         )}
-                                                    </div>
-                                                    
-                                                    {(selectedRecord.type === 'INDIVIDUAL_LOC' || selectedRecord.type === 'GROUPED_UNIT_INDIVIDUAL') && (
-                                                        <div className="flex items-start gap-3 bg-white/5 p-3 rounded-xl border border-white/5 col-span-1 md:col-span-2">
-                                                            <Icono nombre="Hospital" size={16} className="text-[#c89e3a] mt-0.5" />
-                                                            <div className="flex-1">
-                                                                <p className="text-[8px] font-black text-[#d8f3dc] uppercase tracking-widest">
-                                                                    {selectedRecord.type === 'INDIVIDUAL_LOC' ? 'Unidad Médica Asignada' : 'Unidad Médica'}
-                                                                </p>
-                                                                <p className="text-[11px] font-bold uppercase leading-tight mb-1">
-                                                                    {selectedRecord.UNIDAD || selectedRecord.title} 
-                                                                    <span className="ml-2 text-amber-300 font-mono text-[11px]">[{selectedRecord.CLUES || selectedRecord.clues || 'S/C'}]</span>
-                                                                </p>
-                                                                <div className="flex flex-wrap gap-x-4 gap-y-1">
-                                                                    <div className="flex items-center gap-1.5 mt-1">
-                                                                        <Icono nombre="ShieldCheck" size={10} className="text-amber-300/60" />
-                                                                        <span className="text-[9px] font-bold text-white/70 uppercase tracking-wider">INST: {selectedRecord.nomInst || selectedRecord.inst || 'S/I'}</span>
-                                                                    </div>
-                                                                    <div className="flex items-center gap-1.5 mt-1">
-                                                                        <Icono nombre="Map" size={10} className="text-amber-300/60" />
-                                                                        <span className="text-[9px] font-bold text-white/70 uppercase tracking-wider">JUR Operativa: {selectedRecord.jur_um || selectedRecord.jur}</span>
-                                                                    </div>
+                                                        {selectedRecord.type === 'INDIVIDUAL_LOC' && selectedRecord.ageb && selectedRecord.ageb !== "0" && (
+                                                            <div className="flex items-start gap-3 bg-white/5 p-3 rounded-xl border border-white/5">
+                                                                <Icono nombre="Hash" size={16} className="text-amber-300 mt-0.5" />
+                                                                <div>
+                                                                    <p className="text-[8px] font-black text-amber-200 uppercase tracking-widest">AGEB</p>
+                                                                    <p className="text-[10px] font-mono font-bold tracking-widest">{selectedRecord.ageb}</p>
                                                                 </div>
                                                             </div>
-                                                        </div>
-                                                    )}
+                                                        )}
+                                                        {selectedRecord.type === 'INDIVIDUAL_LOC' && selectedRecord.manzana && selectedRecord.manzana !== "0" && (
+                                                            <div className="flex items-start gap-3 bg-white/5 p-3 rounded-xl border border-white/5">
+                                                                <Icono nombre="Hash" size={16} className="text-amber-300 mt-0.5" />
+                                                                <div>
+                                                                    <p className="text-[8px] font-black text-amber-200 uppercase tracking-widest whitespace-nowrap">MANZANA</p>
+                                                                    <p className="text-[10px] font-mono font-bold tracking-widest">{selectedRecord.manzana}</p>
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
                                             <div className="p-10 space-y-10 max-h-[550px] overflow-y-auto custom-scrollbar bg-[#fcfdfc]">
@@ -640,16 +675,7 @@
                                                                 ))
                                                             ) : (
                                                                 [...(selectedRecord.localidades || [])].sort((a,b) => (a.nombre || "").localeCompare(b.nombre || "")).map((loc, i) => (
-                                                                    <div key={i} className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex justify-between items-center group/loc">
-                                                                        <div>
-                                                                            <p className="text-[10px] font-black text-slate-700 uppercase leading-tight mb-1">{loc.nombre || 'N/A'}</p>
-                                                                            <div className="flex items-center gap-1.5"><Icono nombre="Users" size={10} className="text-[#c89e3a]" /><p className="text-[9px] font-bold text-slate-400">Población: {Number(loc.pobTotal || 0).toLocaleString()}</p></div>
-                                                                        </div>
-                                                                        <div className="text-right">
-                                                                            <p className="text-[9px] font-black text-slate-300 uppercase mb-0.5">Clave GEO</p>
-                                                                            <p className="text-[10px] font-mono font-bold text-slate-500">{loc.cveGeo || 'S/C'}</p>
-                                                                        </div>
-                                                                    </div>
+                                                                    <LocalidadRow key={i} loc={loc} />
                                                                 ))
                                                             )}
                                                         </div>
